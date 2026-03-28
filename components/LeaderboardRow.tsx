@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import { Medal } from 'lucide-react'
 import type { UserProfile } from '@/lib/types'
 
@@ -27,6 +28,29 @@ export default function LeaderboardRow({ rank, userProfile, score, isBrandView, 
   const maxScore = 100
   const progress = Math.min((score / maxScore) * 100, 100)
   const rowBg = rankColors[rank] || 'bg-white border-gray-100'
+  const [draftScore, setDraftScore] = useState(score.toString())
+
+  useEffect(() => {
+    setDraftScore(score.toString())
+  }, [score])
+
+  const commitScore = () => {
+    if (!onScoreChange) return
+
+    const nextScore = Number.parseInt(draftScore, 10)
+
+    if (Number.isNaN(nextScore)) {
+      setDraftScore(score.toString())
+      return
+    }
+
+    const clampedScore = Math.min(Math.max(nextScore, 0), maxScore)
+    setDraftScore(clampedScore.toString())
+
+    if (clampedScore !== score) {
+      onScoreChange(clampedScore)
+    }
+  }
 
   return (
     <div className={`flex items-center gap-4 p-4 rounded-xl border ${rowBg} transition-all`}>
@@ -69,8 +93,18 @@ export default function LeaderboardRow({ rank, userProfile, score, isBrandView, 
           <div className="flex items-center gap-2">
             <input
               type="number"
-              value={score}
-              onChange={(e) => onScoreChange(parseInt(e.target.value) || 0)}
+              value={draftScore}
+              onChange={(e) => setDraftScore(e.target.value)}
+              onBlur={commitScore}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.currentTarget.blur()
+                }
+                if (e.key === 'Escape') {
+                  setDraftScore(score.toString())
+                  e.currentTarget.blur()
+                }
+              }}
               min={0}
               max={100}
               className="w-16 border border-gray-200 rounded-lg px-2 py-1 text-sm text-center focus:outline-none focus:ring-2 focus:ring-indigo-500"

@@ -74,6 +74,24 @@ interface ExchangeApplicationLookupRow {
   video_url?: string | null
 }
 
+const DEFAULT_MUTATION_TIMEOUT_MS = 10000
+
+async function withMutationTimeout<T>(promiseLike: PromiseLike<T>, timeoutMs = DEFAULT_MUTATION_TIMEOUT_MS): Promise<T> {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined
+
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => {
+      reject(new Error('La operación tardó demasiado. Revisá tu conexión e intentá de nuevo.'))
+    }, timeoutMs)
+  })
+
+  try {
+    return await Promise.race([Promise.resolve(promiseLike), timeoutPromise])
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId)
+  }
+}
+
 function mapApplicationAnswers(rows: Array<Record<string, unknown>>): ExchangeApplicationAnswer[] {
   return rows.map(row => mapExchangeApplicationAnswer(row))
 }
@@ -188,7 +206,22 @@ export async function fetchCampaignById(campaignId: string, userProfileId?: stri
           exchange_form_questions (*),
           exchange_applications (*)
         ),
-        challenges (*, challenge_days (*))
+        challenges (
+          *,
+          challenge_days (*),
+          challenge_submissions (
+            id,
+            challenge_id,
+            day_id,
+            user_id,
+            submission_url,
+            submission_text,
+            video_url,
+            score,
+            created_at,
+            user_profiles (*)
+          )
+        )
       `)
       .eq('id', campaignId)
       .single()
@@ -297,18 +330,22 @@ export async function createChallengeSubmission(input: {
     throw new Error('Debés agregar al menos un link, texto o video para tu entrega.')
   }
 
-  const { data: submission, error: submissionError } = await supabase
-    .from('challenge_submissions')
-    .insert({
-      challenge_id: input.challengeId,
-      day_id: input.dayId,
-      user_id: input.userProfileId,
-      submission_url: input.submissionUrl || null,
-      submission_text: input.submissionText || null,
-      video_url: input.videoUrl || null,
-    })
-    .select('id')
-    .single()
+  const { data: submission, error: submissionError } = await retryOnTransientFetch(() =>
+    withMutationTimeout(
+      supabase
+        .from('challenge_submissions')
+        .insert({
+          challenge_id: input.challengeId,
+          day_id: input.dayId,
+          user_id: input.userProfileId,
+          submission_url: input.submissionUrl || null,
+          submission_text: input.submissionText || null,
+          video_url: input.videoUrl || null,
+        })
+        .select('id')
+        .single()
+    )
+  )
 
   if (submissionError) {
     if (submissionError.message.toLowerCase().includes('duplicate') || 

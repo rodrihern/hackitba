@@ -94,6 +94,24 @@ export function mapCampaign(row: Record<string, unknown>): Campaign {
       contentType: (d.content_type as Challenge['days'][0]['contentType']) || 'link',
       instructions: (d.instructions as string) || '',
     })),
+    submissions: ((challengeRow.challenge_submissions as Record<string, unknown>[]) || [])
+      .map(submission => {
+        if (!submission.user_profiles) return null
+
+        return {
+          id: submission.id as string,
+          challengeId: submission.challenge_id as string,
+          dayId: submission.day_id as string,
+          userId: submission.user_id as string,
+          userProfile: mapUserProfile(submission.user_profiles as Record<string, unknown>),
+          submissionUrl: (submission.submission_url as string) || undefined,
+          submissionText: (submission.submission_text as string) || undefined,
+          videoUrl: (submission.video_url as string) || undefined,
+          score: (submission.score as number | null) || undefined,
+          createdAt: submission.created_at as string,
+        }
+      })
+      .filter((submission): submission is NonNullable<typeof submission> => Boolean(submission)),
   } : undefined
 
   return {

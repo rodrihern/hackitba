@@ -353,6 +353,10 @@ export async function createNotification(input: {
 }
 
 export async function updateChallengeSubmissionScore(submissionId: string, score: number) {
+  if (!Number.isFinite(score) || score < 0 || score > 100) {
+    throw new Error('El puntaje debe estar entre 0 y 100.')
+  }
+
   const { error } = await supabase.from('challenge_submissions').update({ score }).eq('id', submissionId)
   if (error) throw new Error(error.message)
 }

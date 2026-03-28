@@ -6,7 +6,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { ArrowLeft, Video, ExternalLink, Trophy, Calendar, Users, Gift, Check } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
-import type { Campaign, UserProfile } from '@/lib/types'
+import type { Campaign, ChallengeSubmission, UserProfile } from '@/lib/types'
 import { fetchCampaignById, updateExchangeApplicationVideoUrl } from '@/lib/services/user-service'
 import { isValidVideoUrl, parseVideoUrl, getPlatformName } from '@/lib/utils/video-url-parser'
 import ExchangeApplyModal from '@/components/ExchangeApplyModal'
@@ -150,6 +150,28 @@ export default function CampaignDetailPage() {
 
   const existingVideoUrl = campaign.currentUserApplicationVideoUrl
   const firstChallengeDay = campaign.challenge?.days[0]
+  const leaderboardEntries = [...(campaign.challenge?.submissions || [])].sort(
+    (a, b) => (b.score || 0) - (a.score || 0)
+  )
+
+  const renderLeaderboardVideoLink = (submission: ChallengeSubmission) => {
+    if (!submission.videoUrl) return null
+
+    const parsed = parseVideoUrl(submission.videoUrl)
+
+    return (
+      <a
+        href={submission.videoUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-flex items-center gap-2 text-sm font-medium text-indigo-600 transition-colors hover:text-indigo-700"
+      >
+        <Video size={15} />
+        <span>{parsed.isValid ? `Ver video en ${getPlatformName(parsed.platform)}` : 'Ver video'}</span>
+        <ExternalLink size={14} />
+      </a>
+    )
+  }
 
   return (
     <div className="p-8 max-w-4xl mx-auto">
@@ -306,6 +328,78 @@ export default function CampaignDetailPage() {
                       {campaign.challenge.totalDays} días
                     </div>
                   </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {isChallenge && campaign.challenge?.hasLeaderboard && (
+            <div className="mb-6 rounded-2xl border border-orange-100 bg-orange-50 p-6">
+              <div className="mb-4 flex items-center justify-between gap-4">
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900">Leaderboard</h3>
+                  <p className="text-sm text-gray-600">
+                    Ranking actual del reto con acceso directo a los videos enviados.
+                  </p>
+                </div>
+                <div className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-orange-700">
+                  {leaderboardEntries.length} participantes
+                </div>
+              </div>
+
+              {leaderboardEntries.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-orange-200 bg-white px-5 py-8 text-center text-sm text-gray-500">
+                  Todavía no hay entregas cargadas para este reto.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {leaderboardEntries.map((submission, index) => (
+                    <div
+                      key={submission.id}
+                      className="rounded-2xl border border-white/80 bg-white p-4 shadow-sm"
+                    >
+                      <div className="flex items-start gap-4">
+                        <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-orange-100 text-sm font-bold text-orange-700">
+                          #{index + 1}
+                        </div>
+
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={submission.userProfile.profileImage}
+                          alt={submission.userProfile.username}
+                          className="h-11 w-11 rounded-2xl object-cover"
+                        />
+
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-3">
+                            <div className="min-w-0">
+                              <div className="truncate font-semibold text-gray-900">
+                                @{submission.userProfile.username}
+                              </div>
+                              <div className="text-xs text-gray-400">
+                                {submission.userProfile.category} · {formatDate(submission.createdAt)}
+                              </div>
+                            </div>
+                            <div className="ml-auto rounded-xl bg-indigo-50 px-3 py-1 text-sm font-bold text-indigo-600">
+                              {submission.score || 0} pts
+                            </div>
+                          </div>
+
+                          {submission.submissionText && (
+                            <p className="mt-3 text-sm leading-6 text-gray-600">
+                              {submission.submissionText}
+                            </p>
+                          )}
+
+                          <div className="mt-3 flex flex-wrap items-center gap-3">
+                            {renderLeaderboardVideoLink(submission) || (
+                              <span className="text-sm text-gray-400">Sin video compartido</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
