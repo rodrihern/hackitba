@@ -1,11 +1,12 @@
 import type { UserLevel } from '@/lib/types'
+import { Medal, Gem, Sparkles } from 'lucide-react'
 
-const levelConfig: Record<UserLevel, { color: string; icon: string }> = {
-  Bronze: { color: 'bg-amber-100 text-amber-700 border-amber-200', icon: '🥉' },
-  Silver: { color: 'bg-gray-100 text-gray-600 border-gray-200', icon: '🥈' },
-  Gold: { color: 'bg-yellow-100 text-yellow-700 border-yellow-200', icon: '🥇' },
-  Platinum: { color: 'bg-cyan-100 text-cyan-700 border-cyan-200', icon: '💎' },
-  Diamond: { color: 'bg-violet-100 text-violet-700 border-violet-200', icon: '✨' },
+const levelConfig: Record<UserLevel, { color: string; icon: React.ReactNode }> = {
+  Bronze: { color: 'bg-amber-100 text-amber-700 border-amber-200', icon: <Medal size={13} /> },
+  Silver: { color: 'bg-gray-100 text-gray-600 border-gray-200', icon: <Medal size={13} /> },
+  Gold: { color: 'bg-yellow-100 text-yellow-700 border-yellow-200', icon: <Medal size={13} /> },
+  Platinum: { color: 'bg-cyan-100 text-cyan-700 border-cyan-200', icon: <Gem size={13} /> },
+  Diamond: { color: 'bg-violet-100 text-violet-700 border-violet-200', icon: <Sparkles size={13} /> },
 }
 
 interface Props {

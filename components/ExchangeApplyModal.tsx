@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import { X } from 'lucide-react'
 import type { Campaign, ExchangeFormQuestion } from '@/lib/types'
 import { createExchangeApplication, fetchExchangeFormQuestions } from '@/lib/services/user-service'
 
@@ -190,7 +191,7 @@ export default function ExchangeApplyModal({ campaign, userProfileId, open, onCl
                 className="rounded-full p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
                 aria-label="Cerrar"
               >
-                ✕
+                <X size={16} />
               </button>
             </div>
           </div>

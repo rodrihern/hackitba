@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { CheckCircle, MapPin, Camera, Music, PlayCircle } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 import LevelBadge from '@/components/LevelBadge'
 import type { UserProfile } from '@/lib/types'
@@ -76,7 +77,7 @@ export default function ProfilePage() {
 
       {saved && (
         <div className="mb-4 bg-green-50 border border-green-200 text-green-700 text-sm px-4 py-3 rounded-xl flex items-center gap-2">
-          ✅ Perfil actualizado correctamente
+          <CheckCircle size={16} className="flex-shrink-0" /> Perfil actualizado correctamente
         </div>
       )}
 
@@ -133,7 +134,7 @@ export default function ProfilePage() {
             <div className="mb-4">
               <h2 className="text-xl font-bold text-gray-900">@{profile?.username}</h2>
               <p className="text-gray-500 mt-1 leading-relaxed">{profile?.bio}</p>
-              <p className="text-sm text-gray-400 mt-1">📍 {profile?.location}</p>
+              <p className="text-sm text-gray-400 mt-1 flex items-center gap-1"><MapPin size={13} /> {profile?.location}</p>
             </div>
           )}
 
@@ -194,9 +195,9 @@ export default function ProfilePage() {
             ) : (
               <div className="space-y-2">
                 {[
-                  { label: 'Instagram', url: profile?.instagramUrl, followers: profile?.followersInstagram, icon: '📷', color: 'text-pink-600' },
-                  { label: 'TikTok', url: profile?.tiktokUrl, followers: profile?.followersTiktok, icon: '🎵', color: 'text-gray-900' },
-                  { label: 'YouTube', url: profile?.youtubeUrl, followers: profile?.followersYoutube, icon: '▶', color: 'text-red-600' },
+                  { label: 'Instagram', url: profile?.instagramUrl, followers: profile?.followersInstagram, icon: <Camera size={15} />, color: 'text-pink-600' },
+                  { label: 'TikTok', url: profile?.tiktokUrl, followers: profile?.followersTiktok, icon: <Music size={15} />, color: 'text-gray-900' },
+                  { label: 'YouTube', url: profile?.youtubeUrl, followers: profile?.followersYoutube, icon: <PlayCircle size={15} />, color: 'text-red-600' },
                 ].map(social => (
                   <div key={social.label} className="flex items-center justify-between py-2 px-3 rounded-xl hover:bg-gray-50">
                     <div className="flex items-center gap-2">

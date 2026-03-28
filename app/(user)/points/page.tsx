@@ -3,6 +3,7 @@
 export const dynamic = 'force-dynamic'
 
 import { useState, useEffect } from 'react'
+import { Medal, Gem, Sparkles } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 import LevelBadge from '@/components/LevelBadge'
 import type { UserProfile, UserLevel } from '@/lib/types'
@@ -72,7 +73,7 @@ export default function PointsPage() {
           </div>
           <div className="text-right">
             <div className="text-4xl mb-1">
-              {profile?.level === 'Diamond' ? '✨' : profile?.level === 'Platinum' ? '💎' : profile?.level === 'Gold' ? '🥇' : profile?.level === 'Silver' ? '🥈' : '🥉'}
+              {profile?.level === 'Diamond' ? <Sparkles size={36} /> : profile?.level === 'Platinum' ? <Gem size={36} /> : <Medal size={36} />}
             </div>
             <LevelBadge level={profile?.level ?? 'Bronze'} size="md" />
           </div>
@@ -97,7 +98,7 @@ export default function PointsPage() {
         )}
         {!threshold.next && (
           <div className="text-indigo-100 text-sm">
-            ¡Llegaste al nivel máximo! ✨
+            ¡Llegaste al nivel máximo!
           </div>
         )}
       </div>

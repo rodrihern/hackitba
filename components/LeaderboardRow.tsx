@@ -1,5 +1,6 @@
 'use client'
 
+import { Medal } from 'lucide-react'
 import type { UserProfile } from '@/lib/types'
 
 interface Props {
@@ -16,10 +17,10 @@ const rankColors: Record<number, string> = {
   3: 'bg-orange-50 border-orange-200',
 }
 
-const rankIcons: Record<number, string> = {
-  1: '🥇',
-  2: '🥈',
-  3: '🥉',
+const rankIconColors: Record<number, string> = {
+  1: 'text-yellow-500',
+  2: 'text-gray-400',
+  3: 'text-amber-600',
 }
 
 export default function LeaderboardRow({ rank, userProfile, score, isBrandView, onScoreChange }: Props) {
@@ -32,7 +33,7 @@ export default function LeaderboardRow({ rank, userProfile, score, isBrandView, 
       {/* Rank */}
       <div className="w-8 text-center flex-shrink-0">
         {rank <= 3 ? (
-          <span className="text-xl">{rankIcons[rank]}</span>
+          <Medal size={20} className={rankIconColors[rank]} />
         ) : (
           <span className="text-sm font-bold text-gray-400">#{rank}</span>
         )}

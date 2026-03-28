@@ -3,6 +3,7 @@
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { ArrowLeftRight, Trophy, Star } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 
 export default function Home() {
@@ -104,23 +105,26 @@ export default function Home() {
           <div className="grid grid-cols-3 gap-8">
             {[
               {
-                icon: '🎯',
+                icon: <ArrowLeftRight size={28} className="text-indigo-600" />,
+                bg: 'bg-indigo-50',
                 title: 'Canjes',
                 desc: 'Las marcas ofrecen productos o dinero a cambio de contenido auténtico. Aplicá a los que te interesan.',
               },
               {
-                icon: '🏆',
+                icon: <Trophy size={28} className="text-orange-500" />,
+                bg: 'bg-orange-50',
                 title: 'Retos',
                 desc: 'Participá en challenges con leaderboard. Mostrá tu creatividad y ganá premios exclusivos.',
               },
               {
-                icon: '⭐',
+                icon: <Star size={28} className="text-yellow-500" />,
+                bg: 'bg-yellow-50',
                 title: 'Sistema de Puntos',
                 desc: 'Acumulá puntos con cada colaboración. Subí de nivel y accedé a recompensas premium.',
               },
             ].map((f) => (
               <div key={f.title} className="bg-white rounded-2xl p-8 shadow-sm hover:shadow-md transition-shadow">
-                <div className="text-4xl mb-4">{f.icon}</div>
+                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-4 ${f.bg}`}>{f.icon}</div>
                 <h3 className="font-bold text-gray-900 text-lg mb-2">{f.title}</h3>
                 <p className="text-gray-500 leading-relaxed">{f.desc}</p>
               </div>

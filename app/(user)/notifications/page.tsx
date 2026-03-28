@@ -3,6 +3,7 @@
 export const dynamic = 'force-dynamic'
 
 import { useState, useEffect } from 'react'
+import { Bell } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 import type { Notification } from '@/lib/types'
 import { fetchUserNotifications, markAllNotificationsRead, markNotificationRead } from '@/lib/services/user-service'
@@ -88,7 +89,7 @@ export default function NotificationsPage() {
       <div className="space-y-2">
         {notifications.length === 0 ? (
           <div className="text-center py-20 text-gray-400">
-            <div className="text-5xl mb-4">🔔</div>
+            <div className="flex justify-center mb-4"><Bell size={48} className="text-gray-300" /></div>
             <p className="font-medium text-gray-600 mb-1">Sin notificaciones</p>
           </div>
         ) : (

@@ -1,5 +1,6 @@
 'use client'
 
+import { Camera, Music, PlayCircle } from 'lucide-react'
 import type { UserProfile } from '@/lib/types'
 import LevelBadge from './LevelBadge'
 
@@ -62,19 +63,19 @@ export default function UserCard({ user, onInvite, onClick }: Props) {
         <div className="flex flex-wrap gap-2 mb-4">
           {igFollowers && (
             <div className="flex items-center gap-1 text-xs text-gray-600">
-              <span className="text-pink-500">📷</span>
+              <Camera size={12} className="text-pink-500" />
               <span className="font-medium">{igFollowers}</span>
             </div>
           )}
           {ttFollowers && (
             <div className="flex items-center gap-1 text-xs text-gray-600">
-              <span>🎵</span>
+              <Music size={12} className="text-gray-700" />
               <span className="font-medium">{ttFollowers}</span>
             </div>
           )}
           {ytFollowers && (
             <div className="flex items-center gap-1 text-xs text-gray-600">
-              <span className="text-red-500">▶</span>
+              <PlayCircle size={12} className="text-red-500" />
               <span className="font-medium">{ytFollowers}</span>
             </div>
           )}

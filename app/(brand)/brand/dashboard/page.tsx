@@ -4,6 +4,7 @@ export const dynamic = 'force-dynamic'
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { LayoutList, Rocket, Users, Handshake, ArrowLeftRight, Trophy, User } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 import { fetchBrandDashboardData } from '@/lib/services/brand-service'
 import type { BrandProfile, Campaign } from '@/lib/types'
@@ -59,13 +60,13 @@ export default function BrandDashboardPage() {
       {/* Stats cards */}
       <div className="grid grid-cols-4 gap-4 mb-8">
         {[
-          { label: 'Total campañas', value: campaigns.length, icon: '📋', color: 'text-indigo-600 bg-indigo-50' },
-          { label: 'Campañas activas', value: activeCampaigns.length, icon: '🚀', color: 'text-green-600 bg-green-50' },
-          { label: 'Total aplicaciones', value: totalApplicants, icon: '👥', color: 'text-blue-600 bg-blue-50' },
-          { label: 'Colaboraciones activas', value: acceptedCount, icon: '🤝', color: 'text-violet-600 bg-violet-50' },
+          { label: 'Total campañas', value: campaigns.length, icon: <LayoutList size={20} />, color: 'text-indigo-600 bg-indigo-50' },
+          { label: 'Campañas activas', value: activeCampaigns.length, icon: <Rocket size={20} />, color: 'text-green-600 bg-green-50' },
+          { label: 'Total aplicaciones', value: totalApplicants, icon: <Users size={20} />, color: 'text-blue-600 bg-blue-50' },
+          { label: 'Colaboraciones activas', value: acceptedCount, icon: <Handshake size={20} />, color: 'text-violet-600 bg-violet-50' },
         ].map(stat => (
           <div key={stat.label} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl mb-3 ${stat.color}`}>
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 ${stat.color}`}>
               {stat.icon}
             </div>
             <div className="text-3xl font-extrabold text-gray-900 mb-1">{stat.value}</div>
@@ -83,8 +84,8 @@ export default function BrandDashboardPage() {
               href="/brand/campaigns/create?type=exchange"
               className="flex items-center gap-3 p-4 rounded-xl bg-indigo-50 hover:bg-indigo-100 transition-colors group"
             >
-              <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white text-lg group-hover:scale-105 transition-transform">
-                🔄
+              <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white group-hover:scale-105 transition-transform">
+                <ArrowLeftRight size={18} />
               </div>
               <div>
                 <div className="font-semibold text-gray-900">Crear Canje</div>
@@ -99,8 +100,8 @@ export default function BrandDashboardPage() {
               href="/brand/campaigns/create?type=challenge"
               className="flex items-center gap-3 p-4 rounded-xl bg-orange-50 hover:bg-orange-100 transition-colors group"
             >
-              <div className="w-10 h-10 bg-orange-500 rounded-xl flex items-center justify-center text-white text-lg group-hover:scale-105 transition-transform">
-                🏆
+              <div className="w-10 h-10 bg-orange-500 rounded-xl flex items-center justify-center text-white group-hover:scale-105 transition-transform">
+                <Trophy size={18} />
               </div>
               <div>
                 <div className="font-semibold text-gray-900">Crear Reto</div>
@@ -115,8 +116,8 @@ export default function BrandDashboardPage() {
               href="/brand/marketplace"
               className="flex items-center gap-3 p-4 rounded-xl bg-violet-50 hover:bg-violet-100 transition-colors group"
             >
-              <div className="w-10 h-10 bg-violet-500 rounded-xl flex items-center justify-center text-white text-lg group-hover:scale-105 transition-transform">
-                👤
+              <div className="w-10 h-10 bg-violet-500 rounded-xl flex items-center justify-center text-white group-hover:scale-105 transition-transform">
+                <User size={18} />
               </div>
               <div>
                 <div className="font-semibold text-gray-900">Influencers</div>
