@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth-context'
@@ -10,6 +10,7 @@ export default function SignupPage() {
   const [role, setRole] = useState<UserRole>('user')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   // User fields
   const [username, setUsername] = useState('')
   const [bio, setBio] = useState('')
@@ -26,10 +27,27 @@ export default function SignupPage() {
   const { signup } = useAuth()
   const router = useRouter()
 
+  // Read role from sessionStorage when component mounts
+  useEffect(() => {
+    const savedRole = sessionStorage.getItem('signup_role') as UserRole | null
+    if (savedRole === 'user' || savedRole === 'brand') {
+      setRole(savedRole)
+      // Clear the sessionStorage after reading
+      sessionStorage.removeItem('signup_role')
+    }
+  }, [])
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
     setLoading(true)
+
+    // Validate passwords match
+    if (password !== confirmPassword) {
+      setError('Las contraseñas no coinciden')
+      setLoading(false)
+      return
+    }
 
     const result = await signup({
       email,
@@ -111,6 +129,19 @@ export default function SignupPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Mínimo 6 caracteres"
+                minLength={6}
+                required
+                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Confirmar contraseña</label>
+              <input
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Repetí tu contraseña"
                 minLength={6}
                 required
                 className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"

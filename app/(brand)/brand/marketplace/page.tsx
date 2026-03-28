@@ -21,6 +21,7 @@ export default function MarketplacePage() {
   const [users, setUsers] = useState<UserProfile[]>([])
   const [brandExchanges, setBrandExchanges] = useState<Campaign[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
 
   const [search, setSearch] = useState('')
   const [aiSearch, setAiSearch] = useState('')
@@ -33,35 +34,72 @@ export default function MarketplacePage() {
   const [selectedCampaignId, setSelectedCampaignId] = useState<string>('')
   const [inviteLoading, setInviteLoading] = useState(false)
 
+  const withTimeout = async <T,>(promise: Promise<T>, timeoutMs = 10000): Promise<T> => {
+    let timeoutId: ReturnType<typeof setTimeout> | undefined
+
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      timeoutId = setTimeout(() => reject(new Error('Request timed out')), timeoutMs)
+    })
+
+    try {
+      return await Promise.race([promise, timeoutPromise])
+    } finally {
+      if (timeoutId) clearTimeout(timeoutId)
+    }
+  }
+
   useEffect(() => {
     async function fetchData() {
+      setLoadError('')
+
       try {
-        const [usersResult, campaignsResult] = await Promise.all([
-          supabase
-            .from('user_profiles')
-            .select('*')
-            .order('total_points', { ascending: false }),
-          brand?.id ? supabase
-            .from('campaigns')
-            .select(`
-              *,
-              brand_profiles (id, name, logo),
-              exchanges (*),
-              challenges (*, challenge_days (*))
-            `)
-            .eq('brand_id', brand.id)
-            .eq('type', 'exchange')
-            .eq('status', 'active') : null
-        ])
+        const usersQuery = supabase
+          .from('user_profiles')
+          .select('*')
+          .order('total_points', { ascending: false })
+
+        const campaignsQuery = brand?.id
+          ? supabase
+              .from('campaigns')
+              .select(`
+                *,
+                brand_profiles (id, name, logo),
+                exchanges (*),
+                challenges (*, challenge_days (*))
+              `)
+              .eq('brand_id', brand.id)
+              .eq('type', 'exchange')
+              .eq('status', 'active')
+          : Promise.resolve(null)
+
+        const [usersResult, campaignsResult] = await withTimeout(
+          Promise.all([usersQuery, campaignsQuery]),
+          10000
+        )
+
+        if (usersResult.error) {
+          throw new Error(usersResult.error.message)
+        }
+
+        if (campaignsResult && campaignsResult.error) {
+          throw new Error(campaignsResult.error.message)
+        }
 
         if (usersResult.data) {
           setUsers(usersResult.data.map(row => mapUserProfile(row as Record<string, unknown>)))
+        } else {
+          setUsers([])
         }
         if (campaignsResult?.data) {
           setBrandExchanges(campaignsResult.data.map(row => mapCampaign(row as Record<string, unknown>)))
+        } else {
+          setBrandExchanges([])
         }
       } catch (err) {
         console.error('Error fetching marketplace data:', err)
+        setUsers([])
+        setBrandExchanges([])
+        setLoadError(err instanceof Error ? err.message : 'No se pudo cargar el marketplace')
       } finally {
         setIsLoading(false)
       }
@@ -240,6 +278,62 @@ export default function MarketplacePage() {
           {isLoading ? (
             <div className="flex items-center justify-center py-20">
               <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+            </div>
+          ) : loadError ? (
+            <div className="bg-red-50 border border-red-100 rounded-2xl p-6 text-center">
+              <p className="text-sm text-red-600 mb-4">No se pudo cargar el marketplace: {loadError}</p>
+              <button
+                onClick={() => {
+                  setIsLoading(true)
+                  void (async () => {
+                    try {
+                      const usersQuery = supabase
+                        .from('user_profiles')
+                        .select('*')
+                        .order('total_points', { ascending: false })
+
+                      const campaignsQuery = brand?.id
+                        ? supabase
+                            .from('campaigns')
+                            .select(`
+                              *,
+                              brand_profiles (id, name, logo),
+                              exchanges (*),
+                              challenges (*, challenge_days (*))
+                            `)
+                            .eq('brand_id', brand.id)
+                            .eq('type', 'exchange')
+                            .eq('status', 'active')
+                        : Promise.resolve(null)
+
+                      const [usersResult, campaignsResult] = await withTimeout(
+                        Promise.all([usersQuery, campaignsQuery]),
+                        10000
+                      )
+
+                      if (usersResult.error) throw new Error(usersResult.error.message)
+                      if (campaignsResult && campaignsResult.error) throw new Error(campaignsResult.error.message)
+
+                      setUsers((usersResult.data || []).map(row => mapUserProfile(row as Record<string, unknown>)))
+                      setBrandExchanges((campaignsResult?.data || []).map(row => mapCampaign(row as Record<string, unknown>)))
+                      setLoadError('')
+                    } catch (err) {
+                      setLoadError(err instanceof Error ? err.message : 'No se pudo cargar el marketplace')
+                    } finally {
+                      setIsLoading(false)
+                    }
+                  })()
+                }}
+                className="bg-red-600 text-white text-sm font-medium px-4 py-2 rounded-xl hover:bg-red-700 transition-colors"
+              >
+                Reintentar
+              </button>
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="text-center py-20 bg-white rounded-2xl border border-gray-100">
+              <div className="text-5xl mb-4">🔎</div>
+              <p className="font-medium text-gray-600 mb-1">No encontramos creadores</p>
+              <p className="text-sm text-gray-400">Probá ajustando filtros o limpiando la búsqueda.</p>
             </div>
           ) : (
             <div className="grid grid-cols-3 gap-4">

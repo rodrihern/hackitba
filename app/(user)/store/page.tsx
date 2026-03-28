@@ -22,7 +22,7 @@ interface BrandRow {
 }
 
 export default function StorePage() {
-  const { currentUser } = useAuth()
+  const { currentUser, isLoading: authLoading } = useAuth()
   const [rewards, setRewards] = useState<Reward[]>([])
   const [brandPoints, setBrandPoints] = useState<BrandPointsRow[]>([])
   const [brands, setBrands] = useState<BrandRow[]>([])
@@ -35,7 +35,13 @@ export default function StorePage() {
 
   useEffect(() => {
     async function fetchData() {
-      if (!currentUser) return
+      // Wait for auth to finish loading
+      if (authLoading) return
+      
+      if (!currentUser) {
+        setIsLoading(false)
+        return
+      }
       const userProfile = currentUser.profile as UserProfile
 
       try {
@@ -74,7 +80,7 @@ export default function StorePage() {
     }
 
     fetchData()
-  }, [currentUser])
+  }, [currentUser, authLoading])
 
   const filteredRewards = selectedBrandId === 'all'
     ? rewards

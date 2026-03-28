@@ -23,11 +23,12 @@ const defaultForm = {
 }
 
 export default function BrandStorePage() {
-  const { currentUser } = useAuth()
+  const { currentUser, isLoading: authLoading } = useAuth()
   const brand = currentUser?.profile as BrandProfile
 
   const [rewards, setRewards] = useState<Reward[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
   const [showModal, setShowModal] = useState(false)
   const [editingReward, setEditingReward] = useState<Reward | null>(null)
   const [form, setForm] = useState(defaultForm)
@@ -35,14 +36,43 @@ export default function BrandStorePage() {
   const [saveError, setSaveError] = useState('')
   const [isSaving, setIsSaving] = useState(false)
 
-  const fetchRewards = useCallback(async () => {
-    if (!brand?.id) return
+  const withTimeout = async <T,>(promise: Promise<T>, timeoutMs = 10000): Promise<T> => {
+    let timeoutId: ReturnType<typeof setTimeout> | undefined
+
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      timeoutId = setTimeout(() => reject(new Error('Request timed out')), timeoutMs)
+    })
 
     try {
-      const { data } = await supabase
-        .from('rewards')
-        .select('*')
-        .eq('brand_id', brand.id)
+      return await Promise.race([promise, timeoutPromise])
+    } finally {
+      if (timeoutId) clearTimeout(timeoutId)
+    }
+  }
+
+  const fetchRewards = useCallback(async () => {
+    // Wait for auth to finish loading
+    if (authLoading) return
+
+    setLoadError('')
+    
+    if (!brand?.id) {
+      setIsLoading(false)
+      return
+    }
+
+    try {
+      const { data, error } = await withTimeout(
+        supabase
+          .from('rewards')
+          .select('*')
+          .eq('brand_id', brand.id),
+        10000
+      )
+
+      if (error) {
+        throw new Error(error.message)
+      }
 
       if (data) {
         setRewards(data.map(r => ({
@@ -54,13 +84,17 @@ export default function BrandStorePage() {
           rewardType: r.reward_type,
           image: r.image || '',
         })))
+      } else {
+        setRewards([])
       }
     } catch (err) {
       console.error('Error fetching rewards:', err)
+      setRewards([])
+      setLoadError(err instanceof Error ? err.message : 'No se pudieron cargar los rewards')
     } finally {
       setIsLoading(false)
     }
-  }, [brand?.id])
+  }, [brand?.id, authLoading])
 
   useEffect(() => {
     fetchRewards()
@@ -138,6 +172,25 @@ export default function BrandStorePage() {
     return (
       <div className="p-8 max-w-5xl mx-auto flex items-center justify-center min-h-64">
         <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
+  }
+
+  if (loadError) {
+    return (
+      <div className="p-8 max-w-5xl mx-auto">
+        <div className="bg-red-50 border border-red-100 rounded-2xl p-6 text-center">
+          <p className="text-sm text-red-600 mb-4">No se pudo cargar la tienda: {loadError}</p>
+          <button
+            onClick={() => {
+              setIsLoading(true)
+              void fetchRewards()
+            }}
+            className="bg-red-600 text-white text-sm font-medium px-4 py-2 rounded-xl hover:bg-red-700 transition-colors"
+          >
+            Reintentar
+          </button>
+        </div>
       </div>
     )
   }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/lib/auth-context'
@@ -19,12 +19,19 @@ export default function BrandLayout({ children }: { children: React.ReactNode })
   const { currentUser, isLoading, logout } = useAuth()
   const router = useRouter()
   const pathname = usePathname()
+  const [logoLoadError, setLogoLoadError] = useState(false)
 
   useEffect(() => {
     if (!isLoading && (!currentUser || currentUser.role !== 'brand')) {
       router.replace('/')
     }
   }, [currentUser, isLoading, router])
+
+  const rawLogo = (currentUser?.profile as BrandProfile | undefined)?.logo?.trim() ?? ''
+
+  useEffect(() => {
+    setLogoLoadError(false)
+  }, [rawLogo])
 
   if (isLoading || !currentUser || currentUser.role !== 'brand') {
     return (
@@ -35,6 +42,8 @@ export default function BrandLayout({ children }: { children: React.ReactNode })
   }
 
   const profile = currentUser.profile as BrandProfile
+  const showLogoImage = Boolean(rawLogo) && !logoLoadError
+  const brandInitial = profile.name?.[0]?.toUpperCase() ?? 'B'
 
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden">
@@ -71,17 +80,27 @@ export default function BrandLayout({ children }: { children: React.ReactNode })
           })}
         </nav>
 
+
+
         {/* Brand profile snippet */}
         <div className="px-4 py-4 border-t border-gray-100">
           <div className="flex items-center gap-3 mb-3">
             <div className="w-9 h-9 rounded-xl bg-gray-50 border border-gray-200 flex items-center justify-center overflow-hidden">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={profile.logo}
-                alt={profile.name}
-                className="w-7 h-7 object-contain"
-                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
-              />
+              {showLogoImage ? (
+                <>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={rawLogo}
+                    alt={profile.name}
+                    className="w-7 h-7 object-contain"
+                    onError={() => setLogoLoadError(true)}
+                  />
+                </>
+              ) : (
+                <div className="w-full h-full bg-indigo-100 flex items-center justify-center">
+                  <span className="text-indigo-600 text-sm font-bold">{brandInitial}</span>
+                </div>
+              )}
             </div>
             <div className="min-w-0 flex-1">
               <div className="font-semibold text-gray-900 text-sm truncate">{profile.name}</div>
