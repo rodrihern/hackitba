@@ -82,7 +82,7 @@ export default function HomePage() {
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-1">
           <h1 className="text-2xl font-bold text-gray-900">
-            ¡Bienvenida, {profile?.username}!
+            ¡Bienvenido, {profile?.username}!
           </h1>
           <LevelBadge level={profile?.level} size="md" />
         </div>
