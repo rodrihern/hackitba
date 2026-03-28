@@ -5,10 +5,12 @@ export type ApplicationStatus = 'applied' | 'invited' | 'accepted' | 'rejected'
 export type UserLevel = 'Bronze' | 'Silver' | 'Gold' | 'Platinum' | 'Diamond'
 export type RewardType = 'product' | 'discount' | 'experience'
 export type ContentType = 'video' | 'image' | 'text' | 'link'
+export type ExchangeFormFieldType = 'short_text' | 'long_text' | 'select' | 'radio'
 
 export interface UserProfile {
   id: string
   userId: string
+  email?: string
   username: string
   bio: string
   profileImage: string
@@ -45,6 +47,7 @@ export interface Campaign {
   description: string
   status: CampaignStatus
   createdAt: string
+  currentUserApplicationStatus?: ApplicationStatus
   exchange?: Exchange
   challenge?: Challenge
 }
@@ -60,6 +63,27 @@ export interface Exchange {
   slots: number
   deadline: string
   applicantsCount: number
+  acceptedApplicantsCount: number
+  formQuestions: ExchangeFormQuestion[]
+}
+
+export interface ExchangeFormQuestion {
+  id: string
+  exchangeId: string
+  label: string
+  fieldType: ExchangeFormFieldType
+  required: boolean
+  position: number
+  options: string[]
+}
+
+export interface ExchangeApplicationAnswer {
+  id: string
+  applicationId: string
+  questionId: string
+  answerText: string
+  answerJson?: string[]
+  question?: ExchangeFormQuestion
 }
 
 export interface Challenge {
@@ -90,6 +114,7 @@ export interface Application {
   status: ApplicationStatus
   proposalText: string
   createdAt: string
+  answers: ExchangeApplicationAnswer[]
 }
 
 export interface ChallengeSubmission {

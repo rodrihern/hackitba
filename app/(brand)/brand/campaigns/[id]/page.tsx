@@ -9,8 +9,8 @@ import { mapUserProfile } from '@/lib/mappers'
 import LeaderboardRow from '@/components/LeaderboardRow'
 import type { ApplicationStatus } from '@/lib/types'
 import {
-  createNotification,
   fetchCampaignDetail,
+  mapBrandApplicationAnswers,
   type ApplicationRow,
   type CampaignData,
   type SubmissionRow,
@@ -42,6 +42,8 @@ export default function CampaignDetailPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [applicationStatuses, setApplicationStatuses] = useState<Record<string, ApplicationStatus>>({})
   const [scores, setScores] = useState<Record<string, number>>({})
+  const [statusError, setStatusError] = useState('')
+  const [statusMessage, setStatusMessage] = useState('')
 
   const fetchCampaign = useCallback(async () => {
     try {
@@ -71,22 +73,35 @@ export default function CampaignDetailPage() {
   }, [fetchCampaign])
 
   const updateStatus = async (appId: string, status: ApplicationStatus) => {
-    await updateExchangeApplicationStatus(appId, status)
+    setStatusError('')
+    setStatusMessage('')
 
-    if (status === 'accepted' && campaign) {
-      const app = campaign.exchanges?.exchange_applications?.find(a => a.id === appId)
-      if (app?.user_profiles) {
-        const userProfile = mapUserProfile(app.user_profiles)
-        await createNotification({
-          userId: (app.user_profiles as Record<string, unknown>).user_id as string,
-          title: 'Aplicación aceptada',
-          message: `Tu aplicación para "${campaign.title}" fue aceptada.`,
-        })
-        void userProfile // used for type narrowing
+    try {
+      const result = await updateExchangeApplicationStatus(appId, status, {
+        campaignTitle: campaign?.title,
+        applications: campaign?.exchanges?.exchange_applications || [],
+      })
+
+      setApplicationStatuses(prev => {
+        const next = { ...prev, [result.selectedApplicationId]: result.selectedStatus }
+        for (const rejectedId of result.autoRejectedApplicationIds) {
+          next[rejectedId] = 'rejected'
+        }
+        return next
+      })
+
+      if (result.selectedStatus === 'accepted') {
+        setStatusMessage(
+          result.autoRejectedApplicationIds.length > 0
+            ? 'Aplicación aceptada. Los demás postulantes pendientes fueron rechazados porque ya no quedan slots.'
+            : 'Aplicación aceptada. La creadora será notificada y la marca podrá contactarla por email.'
+        )
+      } else if (result.selectedStatus === 'rejected') {
+        setStatusMessage('Aplicación rechazada. La creadora fue notificada.')
       }
+    } catch (err) {
+      setStatusError(err instanceof Error ? err.message : 'No se pudo actualizar la aplicación')
     }
-
-    setApplicationStatuses(prev => ({ ...prev, [appId]: status }))
   }
 
   const updateScore = async (submissionId: string, score: number) => {
@@ -116,6 +131,9 @@ export default function CampaignDetailPage() {
 
   const campaignApplications = campaign.exchanges?.exchange_applications || []
   const submissions = campaign.challenges?.challenge_submissions || []
+  const acceptedCount = campaignApplications.filter(app => (
+    (applicationStatuses[app.id] || app.status) === 'accepted'
+  )).length
 
   // Build leaderboard from submissions
   const leaderboard = submissions.map(sub => {
@@ -203,6 +221,22 @@ export default function CampaignDetailPage() {
             Aplicaciones ({campaignApplications.length})
           </h2>
 
+          <div className="mb-4 rounded-2xl bg-indigo-50 px-4 py-3 text-sm text-indigo-800">
+            Slots cubiertos: <strong>{acceptedCount}</strong> / {campaign.exchanges?.slots || 0}
+          </div>
+
+          {statusError && (
+            <div className="mb-4 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">
+              {statusError}
+            </div>
+          )}
+
+          {statusMessage && (
+            <div className="mb-4 rounded-2xl border border-green-100 bg-green-50 px-4 py-3 text-sm text-green-700">
+              {statusMessage}
+            </div>
+          )}
+
           {campaignApplications.length === 0 ? (
             <div className="text-center py-10 text-gray-400">
               <div className="text-4xl mb-3">👥</div>
@@ -214,6 +248,7 @@ export default function CampaignDetailPage() {
                 const currentStatus = applicationStatuses[app.id] || app.status
                 const userProfile = app.user_profiles ? mapUserProfile(app.user_profiles) : null
                 if (!userProfile) return null
+                const isTerminalStatus = currentStatus === 'accepted' || currentStatus === 'rejected'
 
                 return (
                   <div key={app.id} className="border border-gray-100 rounded-xl p-4">
@@ -230,6 +265,11 @@ export default function CampaignDetailPage() {
                           <div className="text-xs text-gray-400">
                             {userProfile.level} · {userProfile.category} · {formatDate(app.created_at)}
                           </div>
+                          {userProfile.email && (
+                            <div className="text-xs text-gray-500 mt-1">
+                              {userProfile.email}
+                            </div>
+                          )}
                         </div>
                       </div>
                       <span className={`text-xs font-semibold px-3 py-1 rounded-full ${statusColors[currentStatus]}`}>
@@ -243,22 +283,47 @@ export default function CampaignDetailPage() {
                       </p>
                     )}
 
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => updateStatus(app.id, 'accepted')}
-                        disabled={currentStatus === 'accepted'}
-                        className="flex-1 text-sm bg-green-50 text-green-700 font-medium py-2 rounded-xl hover:bg-green-100 transition-colors disabled:opacity-40"
-                      >
-                        ✅ Aceptar
-                      </button>
-                      <button
-                        onClick={() => updateStatus(app.id, 'rejected')}
-                        disabled={currentStatus === 'rejected'}
-                        className="flex-1 text-sm bg-red-50 text-red-600 font-medium py-2 rounded-xl hover:bg-red-100 transition-colors disabled:opacity-40"
-                      >
-                        ❌ Rechazar
-                      </button>
-                    </div>
+                    {mapBrandApplicationAnswers(app).length > 0 && (
+                      <div className="mb-3 space-y-3 rounded-xl border border-gray-100 bg-gray-50 px-4 py-3">
+                        {mapBrandApplicationAnswers(app).map(answer => (
+                          <div key={answer.id}>
+                            <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+                              {answer.question?.label || 'Respuesta'}
+                            </p>
+                            <p className="text-sm text-gray-700">
+                              {answer.answerText || answer.answerJson?.join(', ') || '-'}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {isTerminalStatus ? (
+                      <div className={`rounded-xl px-4 py-3 text-sm font-medium ${
+                        currentStatus === 'accepted'
+                          ? 'bg-green-50 text-green-700'
+                          : 'bg-red-50 text-red-700'
+                      }`}>
+                        {currentStatus === 'accepted'
+                          ? 'Ya aceptaste esta aplicación. Podés contactar a la creadora por email.'
+                          : 'Ya rechazaste esta aplicación.'}
+                      </div>
+                    ) : (
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => updateStatus(app.id, 'accepted')}
+                          className="flex-1 text-sm bg-green-50 text-green-700 font-medium py-2 rounded-xl hover:bg-green-100 transition-colors"
+                        >
+                          ✅ Aceptar
+                        </button>
+                        <button
+                          onClick={() => updateStatus(app.id, 'rejected')}
+                          className="flex-1 text-sm bg-red-50 text-red-600 font-medium py-2 rounded-xl hover:bg-red-100 transition-colors"
+                        >
+                          ❌ Rechazar
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )
               })}

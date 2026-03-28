@@ -206,6 +206,18 @@ export const mockCampaigns: Campaign[] = [
       slots: 10,
       deadline: '2025-04-15T23:59:00Z',
       applicantsCount: 34,
+      acceptedApplicantsCount: 10,
+      formQuestions: [
+        {
+          id: 'question-1',
+          exchangeId: 'exchange-1',
+          label: '¿Por qué querés participar?',
+          fieldType: 'long_text',
+          required: true,
+          position: 0,
+          options: [],
+        },
+      ],
     },
   },
   {
@@ -316,6 +328,18 @@ export const mockCampaigns: Campaign[] = [
       slots: 15,
       deadline: '2025-05-01T23:59:00Z',
       applicantsCount: 52,
+      acceptedApplicantsCount: 15,
+      formQuestions: [
+        {
+          id: 'question-2',
+          exchangeId: 'exchange-3',
+          label: 'Compartí un link a tu mejor contenido de moda',
+          fieldType: 'short_text',
+          required: true,
+          position: 0,
+          options: [],
+        },
+      ],
     },
   },
   {
@@ -373,6 +397,18 @@ export const mockCampaigns: Campaign[] = [
       slots: 8,
       deadline: '2025-04-30T23:59:00Z',
       applicantsCount: 89,
+      acceptedApplicantsCount: 8,
+      formQuestions: [
+        {
+          id: 'question-3',
+          exchangeId: 'exchange-5',
+          label: '¿En qué plataforma publicarías el contenido principal?',
+          fieldType: 'select',
+          required: true,
+          position: 0,
+          options: ['Instagram', 'TikTok', 'YouTube'],
+        },
+      ],
     },
   },
   {
@@ -435,6 +471,7 @@ export const mockApplications: Application[] = [
     status: 'accepted',
     proposalText: 'Me encanta Nike y el running! Tengo una comunidad muy engaged de fitness lovers. Puedo crear contenido auténtico mostrando las Air Max en mis entrenos.',
     createdAt: '2025-03-05T14:00:00Z',
+    answers: [],
   },
   {
     id: 'app-2',
@@ -444,6 +481,7 @@ export const mockApplications: Application[] = [
     status: 'applied',
     proposalText: 'Soy PT certificada y mis seguidores confían en mis recomendaciones deportivas. Las Air Max serían perfectas para mi contenido de entrenamientos.',
     createdAt: '2025-03-06T10:00:00Z',
+    answers: [],
   },
   {
     id: 'app-3',
@@ -453,6 +491,7 @@ export const mockApplications: Application[] = [
     status: 'applied',
     proposalText: 'Aunque viajo, uso Nike siempre. Podría mostrar las Air Max en distintas ciudades del mundo, lo cual sería un contenido único.',
     createdAt: '2025-03-07T11:00:00Z',
+    answers: [],
   },
   {
     id: 'app-4',
@@ -462,6 +501,7 @@ export const mockApplications: Application[] = [
     status: 'applied',
     proposalText: 'Spotify es parte de mi vida diaria. Mi comunidad es muy musical y estarían súper interesados en ver mi Wrapped.',
     createdAt: '2025-03-15T16:00:00Z',
+    answers: [],
   },
   {
     id: 'app-5',
@@ -471,6 +511,7 @@ export const mockApplications: Application[] = [
     status: 'rejected',
     proposalText: 'Me encanta el estilo de Adidas Originals. Podría combinar el outfit con looks viajeros únicos.',
     createdAt: '2025-03-10T09:00:00Z',
+    answers: [],
   },
 ]
 

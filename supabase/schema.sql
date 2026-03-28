@@ -17,6 +17,7 @@ create type application_status as enum ('applied', 'invited', 'accepted', 'rejec
 create type user_level as enum ('Bronze', 'Silver', 'Gold', 'Platinum', 'Diamond');
 create type reward_type as enum ('product', 'discount', 'experience');
 create type exchange_reward_type as enum ('product', 'money', 'both');
+create type exchange_form_field_type as enum ('short_text', 'long_text', 'select', 'radio');
 create type content_type as enum ('video', 'image', 'text', 'link');
 create type invitation_status as enum ('pending', 'accepted', 'rejected');
 
@@ -111,6 +112,36 @@ create table exchange_applications (
   proposal_text   text,
   created_at      timestamptz not null default now(),
   unique (exchange_id, user_id)
+);
+
+-- ============================================
+-- TABLA: exchange_form_questions (preguntas del formulario de canje)
+-- ============================================
+
+create table exchange_form_questions (
+  id          uuid primary key default uuid_generate_v4(),
+  exchange_id uuid not null references exchanges(id) on delete cascade,
+  label       text not null,
+  field_type  exchange_form_field_type not null default 'short_text',
+  required    boolean not null default true,
+  position    int not null default 0,
+  options     jsonb,
+  created_at  timestamptz not null default now(),
+  unique (exchange_id, position)
+);
+
+-- ============================================
+-- TABLA: exchange_application_answers (respuestas del formulario)
+-- ============================================
+
+create table exchange_application_answers (
+  id             uuid primary key default uuid_generate_v4(),
+  application_id uuid not null references exchange_applications(id) on delete cascade,
+  question_id    uuid not null references exchange_form_questions(id) on delete cascade,
+  answer_text    text,
+  answer_json    jsonb,
+  created_at     timestamptz not null default now(),
+  unique (application_id, question_id)
 );
 
 -- ============================================
@@ -244,6 +275,9 @@ create table notifications (
 
 create index on campaigns (brand_id, status);
 create index on exchange_applications (exchange_id, status);
+create index on exchange_form_questions (exchange_id, position);
+create index on exchange_application_answers (application_id);
+create index on exchange_application_answers (question_id);
 create index on challenge_submissions (challenge_id, user_id);
 create index on brand_points (brand_id, user_id);
 create index on notifications (user_id, read);
@@ -382,6 +416,96 @@ after insert on auth.users
 for each row execute function public.handle_new_user();
 
 -- ============================================
+-- FUNCIÓN: aceptar aplicación respetando slots
+-- ============================================
+
+create or replace function public.accept_exchange_application(target_application_id uuid)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  target_application exchange_applications%rowtype;
+  exchange_slot_count int;
+  accepted_count int;
+  auto_rejected_ids uuid[];
+begin
+  select ea.*
+  into target_application
+  from exchange_applications ea
+  where ea.id = target_application_id;
+
+  if not found then
+    raise exception 'Application not found';
+  end if;
+
+  if not exists (
+    select 1
+    from exchanges e
+    join campaigns c on c.id = e.campaign_id
+    join brand_profiles bp on bp.id = c.brand_id
+    where e.id = target_application.exchange_id
+      and bp.user_id = auth.uid()
+  ) then
+    raise exception 'Not authorized to accept this application';
+  end if;
+
+  select e.slots
+  into exchange_slot_count
+  from exchanges e
+  where e.id = target_application.exchange_id
+  for update;
+
+  select count(*)
+  into accepted_count
+  from exchange_applications ea
+  where ea.exchange_id = target_application.exchange_id
+    and ea.status = 'accepted'
+    and ea.id <> target_application_id;
+
+  if target_application.status <> 'accepted' and accepted_count >= exchange_slot_count then
+    raise exception 'No slots available for this exchange';
+  end if;
+
+  update exchange_applications
+  set status = 'accepted'
+  where id = target_application_id
+  returning *
+  into target_application;
+
+  select count(*)
+  into accepted_count
+  from exchange_applications ea
+  where ea.exchange_id = target_application.exchange_id
+    and ea.status = 'accepted';
+
+  auto_rejected_ids := '{}';
+
+  if accepted_count >= exchange_slot_count then
+    with updated as (
+      update exchange_applications
+      set status = 'rejected'
+      where exchange_id = target_application.exchange_id
+        and status = 'applied'
+      returning id
+    )
+    select coalesce(array_agg(id), '{}')
+    into auto_rejected_ids
+    from updated;
+  end if;
+
+  return jsonb_build_object(
+    'selectedApplicationId', target_application.id,
+    'selectedStatus', target_application.status,
+    'exchangeId', target_application.exchange_id,
+    'autoRejectedApplicationIds', auto_rejected_ids,
+    'slotsFilled', accepted_count >= exchange_slot_count
+  );
+end;
+$$;
+
+-- ============================================
 -- ROW LEVEL SECURITY (RLS)
 -- ============================================
 
@@ -391,6 +515,8 @@ alter table brand_profiles enable row level security;
 alter table campaigns enable row level security;
 alter table exchanges enable row level security;
 alter table exchange_applications enable row level security;
+alter table exchange_form_questions enable row level security;
+alter table exchange_application_answers enable row level security;
 alter table challenges enable row level security;
 alter table challenge_days enable row level security;
 alter table challenge_submissions enable row level security;
@@ -404,6 +530,20 @@ alter table notifications enable row level security;
 -- profiles: cada uno ve el suyo
 create policy "profiles: ver propio" on profiles
   for select using (auth.uid() = id);
+
+create policy "profiles: marca ve applicants" on profiles
+  for select using (
+    exists (
+      select 1
+      from user_profiles up
+      join exchange_applications ea on ea.user_id = up.id
+      join exchanges e on e.id = ea.exchange_id
+      join campaigns c on c.id = e.campaign_id
+      join brand_profiles bp on bp.id = c.brand_id
+      where up.user_id = profiles.id
+        and bp.user_id = auth.uid()
+    )
+  );
 
 -- user_profiles: público para leer, solo el dueño edita
 create policy "user_profiles: lectura pública" on user_profiles
@@ -479,6 +619,73 @@ create policy "applications: marca actualiza estado" on exchange_applications
       join campaigns c on c.id = e.campaign_id
       join brand_profiles bp on bp.id = c.brand_id
       where bp.user_id = auth.uid()
+    )
+  );
+
+-- exchange_form_questions: visibles para campañas activas y gestionables por la marca dueña
+create policy "exchange_form_questions: lectura según campaña" on exchange_form_questions
+  for select using (
+    exchange_id in (
+      select e.id
+      from exchanges e
+      join campaigns c on c.id = e.campaign_id
+      where c.status = 'active'
+    )
+    or exchange_id in (
+      select e.id
+      from exchanges e
+      join campaigns c on c.id = e.campaign_id
+      join brand_profiles bp on bp.id = c.brand_id
+      where bp.user_id = auth.uid()
+    )
+  );
+
+create policy "exchange_form_questions: marca gestiona" on exchange_form_questions
+  for all using (
+    exchange_id in (
+      select e.id
+      from exchanges e
+      join campaigns c on c.id = e.campaign_id
+      join brand_profiles bp on bp.id = c.brand_id
+      where bp.user_id = auth.uid()
+    )
+  )
+  with check (
+    exchange_id in (
+      select e.id
+      from exchanges e
+      join campaigns c on c.id = e.campaign_id
+      join brand_profiles bp on bp.id = c.brand_id
+      where bp.user_id = auth.uid()
+    )
+  );
+
+-- exchange_application_answers: usuario ve/crea las suyas, marca ve las de sus campañas
+create policy "exchange_application_answers: lectura propia o de marca" on exchange_application_answers
+  for select using (
+    application_id in (
+      select ea.id
+      from exchange_applications ea
+      join user_profiles up on up.id = ea.user_id
+      where up.user_id = auth.uid()
+    )
+    or application_id in (
+      select ea.id
+      from exchange_applications ea
+      join exchanges e on e.id = ea.exchange_id
+      join campaigns c on c.id = e.campaign_id
+      join brand_profiles bp on bp.id = c.brand_id
+      where bp.user_id = auth.uid()
+    )
+  );
+
+create policy "exchange_application_answers: usuario crea propias" on exchange_application_answers
+  for insert with check (
+    application_id in (
+      select ea.id
+      from exchange_applications ea
+      join user_profiles up on up.id = ea.user_id
+      where up.user_id = auth.uid()
     )
   );
 

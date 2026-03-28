@@ -1,11 +1,23 @@
 import { supabase } from '@/lib/supabase'
-import type { CampaignStatus, CampaignType, ContentType } from '@/lib/types'
+import type {
+  CampaignStatus,
+  CampaignType,
+  ContentType,
+  ExchangeFormFieldType,
+} from '@/lib/types'
 
 interface ChallengeDayInput {
   title: string
   description: string
   contentType: ContentType
   instructions: string
+}
+
+interface ExchangeFormQuestionInput {
+  label: string
+  fieldType: ExchangeFormFieldType
+  required: boolean
+  options: string[]
 }
 
 interface CreateCampaignInput {
@@ -15,12 +27,13 @@ interface CreateCampaignInput {
   description: string
   status: CampaignStatus
   exchange?: {
-    requirement: string
+    requirementsBrief: string
     rewardType: 'product' | 'money' | 'both'
     moneyAmount: string
     productDescription: string
     slots: string
     deadline: string
+    formQuestions: ExchangeFormQuestionInput[]
   }
   challenge?: {
     isMultiDay: boolean
@@ -31,6 +44,31 @@ interface CreateCampaignInput {
 }
 
 const DEFAULT_TIMEOUT_MS = 12000
+
+function getDefaultExchangeQuestions(input: CreateCampaignInput['exchange']): ExchangeFormQuestionInput[] {
+  const requirementPrompt = input?.requirementsBrief?.trim()
+
+  return [
+    {
+      label: 'Contanos por qué sos una buena opción para esta campaña',
+      fieldType: 'long_text',
+      required: true,
+      options: [],
+    },
+    {
+      label: requirementPrompt || 'Compartí cómo cumplís con los requisitos de la campaña',
+      fieldType: 'long_text',
+      required: true,
+      options: [],
+    },
+    {
+      label: 'Dejanos tu usuario principal o link de contenido',
+      fieldType: 'short_text',
+      required: true,
+      options: [],
+    },
+  ]
+}
 
 async function withTimeout<T>(promiseLike: PromiseLike<T>, timeoutMs = DEFAULT_TIMEOUT_MS): Promise<T> {
   let timeoutId: ReturnType<typeof setTimeout> | undefined
@@ -70,10 +108,10 @@ export async function createCampaign(input: CreateCampaignInput): Promise<string
   }
 
   if (input.type === 'exchange' && input.exchange) {
-    const { error: exchangeError } = await withTimeout(
+    const { data: exchange, error: exchangeError } = await withTimeout(
       supabase.from('exchanges').insert({
         campaign_id: campaign.id,
-        requirements: input.exchange.requirement ? { main: input.exchange.requirement } : {},
+        requirements: input.exchange.requirementsBrief ? { main: input.exchange.requirementsBrief } : {},
         reward_description: input.exchange.productDescription || `Recompensa: ${input.exchange.rewardType}`,
         reward_type: input.exchange.rewardType,
         money_amount: input.exchange.moneyAmount ? parseFloat(input.exchange.moneyAmount) : null,
@@ -83,10 +121,37 @@ export async function createCampaign(input: CreateCampaignInput): Promise<string
           input.exchange.deadline ||
           new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
       })
+      .select()
+      .single()
     )
 
     if (exchangeError) {
       throw new Error(exchangeError.message)
+    }
+
+    if (!exchange?.id) {
+      throw new Error('Exchange was created without an id')
+    }
+
+    const formQuestions = input.exchange.formQuestions.length > 0
+      ? input.exchange.formQuestions
+      : getDefaultExchangeQuestions(input.exchange)
+
+    const { error: questionsError } = await withTimeout(
+      supabase.from('exchange_form_questions').insert(
+        formQuestions.map((question, index) => ({
+          exchange_id: exchange.id,
+          label: question.label,
+          field_type: question.fieldType,
+          required: question.required,
+          position: index,
+          options: question.options.length > 0 ? question.options : null,
+        }))
+      )
+    )
+
+    if (questionsError) {
+      throw new Error(questionsError.message)
     }
   }
 

@@ -6,6 +6,7 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '@/lib/auth-context'
 import { fetchActiveCampaigns } from '@/lib/services/user-service'
 import CampaignCard from '@/components/CampaignCard'
+import ExchangeApplyModal from '@/components/ExchangeApplyModal'
 import LevelBadge from '@/components/LevelBadge'
 import type { UserProfile, Campaign } from '@/lib/types'
 
@@ -21,13 +22,13 @@ export default function HomePage() {
   const { currentUser } = useAuth()
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [appliedCampaigns, setAppliedCampaigns] = useState<Set<string>>(new Set())
+  const [selectedExchange, setSelectedExchange] = useState<Campaign | null>(null)
   const profile = currentUser?.profile as UserProfile
 
   useEffect(() => {
     async function fetchCampaigns() {
       try {
-        const data = await fetchActiveCampaigns()
+        const data = await fetchActiveCampaigns(profile?.id)
         setCampaigns(data)
       } catch (err) {
         console.error('Error fetching campaigns:', err)
@@ -37,7 +38,7 @@ export default function HomePage() {
     }
 
     fetchCampaigns()
-  }, [])
+  }, [profile?.id])
 
   const exchanges = campaigns.filter(c => c.type === 'exchange')
   const challenges = campaigns.filter(c => c.type === 'challenge')
@@ -48,9 +49,24 @@ export default function HomePage() {
     100
   )
 
-  const handleApply = (campaignId: string) => {
-    setAppliedCampaigns(prev => new Set([...prev, campaignId]))
+  const handleApplied = (campaignId: string) => {
+    setCampaigns(prev => prev.map(campaign => (
+      campaign.id === campaignId
+        ? {
+            ...campaign,
+            currentUserApplicationStatus: 'applied',
+            exchange: campaign.exchange
+              ? {
+                  ...campaign.exchange,
+                  applicantsCount: campaign.exchange.applicantsCount + 1,
+                }
+              : campaign.exchange,
+          }
+        : campaign
+    )))
   }
+
+  const appliedCount = campaigns.filter(campaign => Boolean(campaign.currentUserApplicationStatus)).length
 
   if (isLoading) {
     return (
@@ -107,11 +123,11 @@ export default function HomePage() {
 
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
           <div className="text-3xl font-extrabold text-green-600 mb-1">
-            {appliedCampaigns.size}
+            {appliedCount}
           </div>
-          <div className="text-sm text-gray-500">Aplicaciones en esta sesión</div>
+          <div className="text-sm text-gray-500">Canjes aplicados</div>
           <div className="mt-2 text-xs text-gray-400">
-            {appliedCampaigns.size === 0 ? '¡Empezá a aplicar!' : 'Revisalas en Mis Campañas'}
+            {appliedCount === 0 ? '¡Empezá a aplicar!' : 'Revisalas en Mis Campañas'}
           </div>
         </div>
       </div>
@@ -135,7 +151,7 @@ export default function HomePage() {
               <CampaignCard
                 key={campaign.id}
                 campaign={campaign}
-                onApply={() => handleApply(campaign.id)}
+                onApply={() => setSelectedExchange(campaign)}
                 href={`/explore`}
               />
             ))}
@@ -162,13 +178,20 @@ export default function HomePage() {
               <CampaignCard
                 key={campaign.id}
                 campaign={campaign}
-                onApply={() => handleApply(campaign.id)}
-                href={`/explore`}
+                href="/explore"
               />
             ))}
           </div>
         )}
       </section>
+
+      <ExchangeApplyModal
+        campaign={selectedExchange}
+        userProfileId={profile?.id}
+        open={Boolean(selectedExchange)}
+        onClose={() => setSelectedExchange(null)}
+        onApplied={handleApplied}
+      />
     </div>
   )
 }

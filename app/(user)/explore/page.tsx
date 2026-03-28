@@ -3,21 +3,26 @@
 export const dynamic = 'force-dynamic'
 
 import { useState, useEffect } from 'react'
+import { useAuth } from '@/lib/auth-context'
 import { fetchAllCampaigns } from '@/lib/services/user-service'
 import CampaignCard from '@/components/CampaignCard'
-import type { Campaign, CampaignType, CampaignStatus } from '@/lib/types'
+import ExchangeApplyModal from '@/components/ExchangeApplyModal'
+import type { Campaign, CampaignType, CampaignStatus, UserProfile } from '@/lib/types'
 
 export default function ExplorePage() {
+  const { currentUser } = useAuth()
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState<CampaignType | 'all'>('all')
   const [statusFilter, setStatusFilter] = useState<CampaignStatus | 'all'>('active')
+  const [selectedExchange, setSelectedExchange] = useState<Campaign | null>(null)
+  const profile = currentUser?.profile as UserProfile
 
   useEffect(() => {
     async function fetchCampaigns() {
       try {
-        const data = await fetchAllCampaigns()
+        const data = await fetchAllCampaigns(profile?.id)
         setCampaigns(data)
       } catch (err) {
         console.error('Error fetching campaigns:', err)
@@ -27,7 +32,7 @@ export default function ExplorePage() {
     }
 
     fetchCampaigns()
-  }, [])
+  }, [profile?.id])
 
   const filtered = campaigns.filter(c => {
     const matchesSearch = search === '' ||
@@ -39,8 +44,21 @@ export default function ExplorePage() {
     return matchesSearch && matchesType && matchesStatus
   })
 
-  const handleApply = () => {
-    // Reserved for future local UI updates after applying.
+  const handleApplied = (campaignId: string) => {
+    setCampaigns(prev => prev.map(campaign => (
+      campaign.id === campaignId
+        ? {
+            ...campaign,
+            currentUserApplicationStatus: 'applied',
+            exchange: campaign.exchange
+              ? {
+                  ...campaign.exchange,
+                  applicantsCount: campaign.exchange.applicantsCount + 1,
+                }
+              : campaign.exchange,
+          }
+        : campaign
+    )))
   }
 
   return (
@@ -120,11 +138,19 @@ export default function ExplorePage() {
             <CampaignCard
               key={campaign.id}
               campaign={campaign}
-              onApply={handleApply}
+              onApply={campaign.type === 'exchange' ? () => setSelectedExchange(campaign) : undefined}
             />
           ))}
         </div>
       )}
+
+      <ExchangeApplyModal
+        campaign={selectedExchange}
+        userProfileId={profile?.id}
+        open={Boolean(selectedExchange)}
+        onClose={() => setSelectedExchange(null)}
+        onApplied={handleApplied}
+      />
     </div>
   )
 }

@@ -126,10 +126,33 @@ export default function CampaignsPage() {
                     </div>
                   )}
 
+                  {(app.answers || []).length > 0 && (
+                    <div className="mt-3 rounded-xl border border-gray-100 px-4 py-3">
+                      <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">
+                        Formulario enviado
+                      </div>
+                      <div className="space-y-2">
+                        {(app.answers || []).slice(0, 2).map(answer => (
+                          <div key={answer.id}>
+                            <p className="text-xs font-medium text-gray-500">{answer.question?.label || 'Respuesta'}</p>
+                            <p className="text-sm text-gray-700">{answer.answerText || answer.answerJson?.join(', ')}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   {app.status === 'accepted' && (
                     <div className="mt-3 bg-green-50 rounded-xl px-4 py-3 flex items-center gap-2">
                       <span className="text-green-600">✅</span>
-                      <span className="text-sm text-green-700 font-medium">¡Felicitaciones! Tu aplicación fue aceptada. La marca se comunicará con vos pronto.</span>
+                      <span className="text-sm text-green-700 font-medium">Tu aplicación fue aceptada. La marca te va a contactar por email directamente para seguir con la colaboración.</span>
+                    </div>
+                  )}
+
+                  {app.status === 'rejected' && (
+                    <div className="mt-3 bg-red-50 rounded-xl px-4 py-3 flex items-center gap-2">
+                      <span className="text-red-600">✕</span>
+                      <span className="text-sm text-red-700 font-medium">Tu aplicación fue rechazada. Podés seguir explorando otros canjes activos.</span>
                     </div>
                   )}
                 </div>

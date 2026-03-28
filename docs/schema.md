@@ -81,6 +81,29 @@ CREATE TABLE public.exchange_applications (
   CONSTRAINT exchange_applications_exchange_id_fkey FOREIGN KEY (exchange_id) REFERENCES public.exchanges(id),
   CONSTRAINT exchange_applications_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.user_profiles(id)
 );
+CREATE TABLE public.exchange_form_questions (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  exchange_id uuid NOT NULL,
+  label text NOT NULL,
+  field_type USER-DEFINED NOT NULL DEFAULT 'short_text'::exchange_form_field_type,
+  required boolean NOT NULL DEFAULT true,
+  position integer NOT NULL DEFAULT 0,
+  options jsonb,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT exchange_form_questions_pkey PRIMARY KEY (id),
+  CONSTRAINT exchange_form_questions_exchange_id_fkey FOREIGN KEY (exchange_id) REFERENCES public.exchanges(id)
+);
+CREATE TABLE public.exchange_application_answers (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  application_id uuid NOT NULL,
+  question_id uuid NOT NULL,
+  answer_text text,
+  answer_json jsonb,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT exchange_application_answers_pkey PRIMARY KEY (id),
+  CONSTRAINT exchange_application_answers_application_id_fkey FOREIGN KEY (application_id) REFERENCES public.exchange_applications(id),
+  CONSTRAINT exchange_application_answers_question_id_fkey FOREIGN KEY (question_id) REFERENCES public.exchange_form_questions(id)
+);
 CREATE TABLE public.exchanges (
   id uuid NOT NULL DEFAULT uuid_generate_v4(),
   campaign_id uuid NOT NULL,

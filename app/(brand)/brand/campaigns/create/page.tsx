@@ -6,7 +6,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth-context'
 import { createCampaign } from '@/lib/services/campaign-service'
-import type { CampaignType, ContentType, BrandProfile } from '@/lib/types'
+import type { CampaignType, ContentType, BrandProfile, ExchangeFormFieldType } from '@/lib/types'
 
 type Step = 1 | 2 | 3
 
@@ -15,6 +15,25 @@ interface ChallengeDay {
   description: string
   contentType: ContentType
   instructions: string
+}
+
+interface ExchangeQuestionDraft {
+  id: string
+  label: string
+  fieldType: ExchangeFormFieldType
+  required: boolean
+  options: string
+}
+
+function createQuestionDraft(overrides: Partial<ExchangeQuestionDraft> = {}): ExchangeQuestionDraft {
+  return {
+    id: crypto.randomUUID(),
+    label: '',
+    fieldType: 'short_text',
+    required: true,
+    options: '',
+    ...overrides,
+  }
 }
 
 export default function CreateCampaignPage() {
@@ -35,7 +54,13 @@ export default function CreateCampaignPage() {
   const [rewardType, setRewardType] = useState<'product' | 'money' | 'both'>('product')
   const [moneyAmount, setMoneyAmount] = useState('')
   const [productDescription, setProductDescription] = useState('')
-  const [requirement, setRequirement] = useState('')
+  const [requirementsBrief, setRequirementsBrief] = useState('')
+  const [applicationQuestions, setApplicationQuestions] = useState<ExchangeQuestionDraft[]>([
+    createQuestionDraft({
+      label: 'Contanos por qué querés participar en este canje',
+      fieldType: 'long_text',
+    }),
+  ])
 
   // Challenge fields
   const [isMultiDay, setIsMultiDay] = useState(false)
@@ -53,12 +78,28 @@ export default function CreateCampaignPage() {
     setDays(prev => [...prev, { title: '', description: '', contentType: 'image', instructions: '' }])
   }
 
+  const addApplicationQuestion = () => {
+    setApplicationQuestions(prev => [...prev, createQuestionDraft()])
+  }
+
   const updateDay = (idx: number, field: keyof ChallengeDay, value: string) => {
     setDays(prev => prev.map((d, i) => i === idx ? { ...d, [field]: value } : d))
   }
 
+  const updateQuestion = (id: string, field: keyof ExchangeQuestionDraft, value: string | boolean) => {
+    setApplicationQuestions(prev => prev.map(question => (
+      question.id === id ? { ...question, [field]: value } : question
+    )))
+  }
+
   const removeDay = (idx: number) => {
     if (days.length > 1) setDays(prev => prev.filter((_, i) => i !== idx))
+  }
+
+  const removeQuestion = (id: string) => {
+    if (applicationQuestions.length > 1) {
+      setApplicationQuestions(prev => prev.filter(question => question.id !== id))
+    }
   }
 
   const handleSubmit = async (status: 'draft' | 'active') => {
@@ -79,12 +120,22 @@ export default function CreateCampaignPage() {
         description,
         status,
         exchange: {
-          requirement,
+          requirementsBrief,
           rewardType,
           moneyAmount,
           productDescription,
           slots,
           deadline,
+          formQuestions: applicationQuestions
+            .filter(question => question.label.trim().length > 0)
+            .map(question => ({
+              label: question.label.trim(),
+              fieldType: question.fieldType,
+              required: question.required,
+              options: question.fieldType === 'select' || question.fieldType === 'radio'
+                ? question.options.split(',').map(option => option.trim()).filter(Boolean)
+                : [],
+            })),
         },
         challenge: {
           isMultiDay,
@@ -268,13 +319,13 @@ export default function CreateCampaignPage() {
               )}
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Requisito principal</label>
-                <input
-                  type="text"
-                  value={requirement}
-                  onChange={(e) => setRequirement(e.target.value)}
-                  placeholder="Ej: Mínimo 10,000 seguidores + 2 posts en Instagram"
-                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                <label className="block text-sm font-medium text-gray-700 mb-1">Brief de requisitos</label>
+                <textarea
+                  value={requirementsBrief}
+                  onChange={(e) => setRequirementsBrief(e.target.value)}
+                  placeholder="Ej: Buscamos perfiles lifestyle de Argentina con contenido en Instagram y entrega en 7 días."
+                  rows={3}
+                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
                 />
               </div>
 
@@ -297,6 +348,81 @@ export default function CreateCampaignPage() {
                     onChange={(e) => setDeadline(e.target.value)}
                     className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-gray-200 p-4">
+                <div className="mb-4 flex items-center justify-between">
+                  <div>
+                    <h3 className="font-semibold text-gray-900">Formulario de aplicación</h3>
+                    <p className="text-sm text-gray-500">Estas preguntas se mostrarán cuando una creadora toque “Aplicar”.</p>
+                  </div>
+                  <button
+                    onClick={addApplicationQuestion}
+                    className="text-sm font-medium text-indigo-600 hover:text-indigo-700"
+                  >
+                    + Agregar pregunta
+                  </button>
+                </div>
+
+                <div className="space-y-4">
+                  {applicationQuestions.map((question, idx) => (
+                    <div key={question.id} className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
+                      <div className="mb-3 flex items-center justify-between">
+                        <span className="text-sm font-medium text-gray-700">Pregunta {idx + 1}</span>
+                        {applicationQuestions.length > 1 && (
+                          <button
+                            onClick={() => removeQuestion(question.id)}
+                            className="text-xs text-red-500 hover:text-red-600"
+                          >
+                            Eliminar
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="space-y-3">
+                        <input
+                          type="text"
+                          value={question.label}
+                          onChange={(e) => updateQuestion(question.id, 'label', e.target.value)}
+                          placeholder="Escribí la pregunta"
+                          className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        />
+
+                        <div className="grid grid-cols-2 gap-3">
+                          <select
+                            value={question.fieldType}
+                            onChange={(e) => updateQuestion(question.id, 'fieldType', e.target.value)}
+                            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                          >
+                            <option value="short_text">Respuesta corta</option>
+                            <option value="long_text">Respuesta larga</option>
+                            <option value="select">Selector</option>
+                            <option value="radio">Opción única</option>
+                          </select>
+
+                          <label className="flex items-center gap-3 rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700">
+                            <input
+                              type="checkbox"
+                              checked={question.required}
+                              onChange={(e) => updateQuestion(question.id, 'required', e.target.checked)}
+                            />
+                            Obligatoria
+                          </label>
+                        </div>
+
+                        {(question.fieldType === 'select' || question.fieldType === 'radio') && (
+                          <input
+                            type="text"
+                            value={question.options}
+                            onChange={(e) => updateQuestion(question.id, 'options', e.target.value)}
+                            placeholder="Opciones separadas por coma"
+                            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                          />
+                        )}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             </>
@@ -462,6 +588,10 @@ export default function CreateCampaignPage() {
                     <div className="font-semibold text-gray-900 text-xs">{productDescription}</div>
                   </div>
                 )}
+                <div className="bg-gray-50 rounded-xl p-3 col-span-2">
+                  <div className="text-xs text-gray-400 mb-1">Preguntas del formulario</div>
+                  <div className="font-semibold text-gray-900">{applicationQuestions.filter(question => question.label.trim()).length || 'Usará formulario por defecto'}</div>
+                </div>
               </div>
             )}
 

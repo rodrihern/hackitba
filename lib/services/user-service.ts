@@ -1,12 +1,20 @@
-import { mapCampaign } from '@/lib/mappers'
+import { mapCampaign, mapExchangeApplicationAnswer } from '@/lib/mappers'
 import { supabase } from '@/lib/supabase'
-import type { Campaign, Notification } from '@/lib/types'
+import type {
+  ApplicationStatus,
+  Campaign,
+  ExchangeApplicationAnswer,
+  ExchangeFormQuestion,
+  Notification,
+} from '@/lib/types'
 
 export interface UserCampaignApplicationRow {
   id: string
-  status: 'applied' | 'invited' | 'accepted' | 'rejected'
+  status: ApplicationStatus
   proposal_text: string
   created_at: string
+  answers?: ExchangeApplicationAnswer[]
+  exchange_application_answers?: Array<Record<string, unknown>>
   exchanges: {
     id: string
     campaigns: {
@@ -56,39 +64,185 @@ export interface StoreBrandRow {
   logo: string
 }
 
-export async function fetchAllCampaigns(): Promise<Campaign[]> {
+interface ExchangeApplicationLookupRow {
+  id: string
+  exchange_id: string
+  status: ApplicationStatus
+  user_id: string
+}
+
+function mapApplicationAnswers(rows: Array<Record<string, unknown>>): ExchangeApplicationAnswer[] {
+  return rows.map(row => mapExchangeApplicationAnswer(row))
+}
+
+async function augmentCampaignsWithExchangeStats(
+  campaignsData: Record<string, unknown>[],
+  userProfileId?: string
+): Promise<Campaign[]> {
+  const campaigns = campaignsData.map(row => mapCampaign(row))
+  const exchangeIds = campaigns
+    .flatMap(campaign => (campaign.exchange ? [campaign.exchange.id] : []))
+    .filter(Boolean)
+
+  if (exchangeIds.length === 0) {
+    return campaigns
+  }
+
+  const { data: applicationRows, error } = await supabase
+    .from('exchange_applications')
+    .select('id, exchange_id, status, user_id')
+    .in('exchange_id', exchangeIds)
+
+  if (error) {
+    throw new Error(error.message)
+  }
+
+  const counts = new Map<string, number>()
+  const acceptedCounts = new Map<string, number>()
+  const currentUserStatuses = new Map<string, ApplicationStatus>()
+
+  for (const row of (applicationRows || []) as ExchangeApplicationLookupRow[]) {
+    counts.set(row.exchange_id, (counts.get(row.exchange_id) || 0) + 1)
+    if (row.status === 'accepted') {
+      acceptedCounts.set(row.exchange_id, (acceptedCounts.get(row.exchange_id) || 0) + 1)
+    }
+    if (userProfileId && row.user_id === userProfileId) {
+      currentUserStatuses.set(row.exchange_id, row.status)
+    }
+  }
+
+  return campaigns.map(campaign => {
+    if (!campaign.exchange) return campaign
+
+    return {
+      ...campaign,
+      currentUserApplicationStatus: currentUserStatuses.get(campaign.exchange.id),
+      exchange: {
+        ...campaign.exchange,
+        applicantsCount: counts.get(campaign.exchange.id) || 0,
+        acceptedApplicantsCount: acceptedCounts.get(campaign.exchange.id) || 0,
+      },
+    }
+  })
+}
+
+export async function fetchAllCampaigns(userProfileId?: string): Promise<Campaign[]> {
   const { data, error } = await supabase
     .from('campaigns')
     .select(`
       *,
       brand_profiles (id, name, logo),
-      exchanges (*),
+      exchanges (
+        *,
+        exchange_form_questions (*)
+      ),
       challenges (*, challenge_days (*))
     `)
     .order('created_at', { ascending: false })
 
   if (error) throw new Error(error.message)
-  return (data || []).map(row => mapCampaign(row as Record<string, unknown>))
+  return augmentCampaignsWithExchangeStats((data || []) as Record<string, unknown>[], userProfileId)
 }
 
-export async function fetchActiveCampaigns(): Promise<Campaign[]> {
+export async function fetchActiveCampaigns(userProfileId?: string): Promise<Campaign[]> {
   const { data, error } = await supabase
     .from('campaigns')
     .select(`
       *,
       brand_profiles (id, name, logo),
-      exchanges (*),
+      exchanges (
+        *,
+        exchange_form_questions (*)
+      ),
       challenges (*, challenge_days (*))
     `)
     .eq('status', 'active')
     .order('created_at', { ascending: false })
 
   if (error) throw new Error(error.message)
-  return (data || []).map(row => mapCampaign(row as Record<string, unknown>))
+  return augmentCampaignsWithExchangeStats((data || []) as Record<string, unknown>[], userProfileId)
+}
+
+export async function fetchExchangeFormQuestions(exchangeId: string): Promise<ExchangeFormQuestion[]> {
+  const { data, error } = await supabase
+    .from('exchange_form_questions')
+    .select('*')
+    .eq('exchange_id', exchangeId)
+    .order('position', { ascending: true })
+
+  if (error) throw new Error(error.message)
+
+  return ((data || []) as Record<string, unknown>[]).map(row => ({
+    id: row.id as string,
+    exchangeId: row.exchange_id as string,
+    label: row.label as string,
+    fieldType: row.field_type as ExchangeFormQuestion['fieldType'],
+    required: Boolean(row.required),
+    position: (row.position as number) || 0,
+    options: Array.isArray(row.options) ? row.options.map(option => String(option)) : [],
+  }))
+}
+
+export async function createExchangeApplication(input: {
+  exchangeId: string
+  userProfileId: string
+  answers: Array<{
+    questionId: string
+    answerText: string
+    answerJson?: string[]
+  }>
+}) {
+  if (!input.exchangeId) {
+    throw new Error('No se pudo detectar el canje para esta aplicación.')
+  }
+
+  const primaryAnswer = input.answers.find(answer => answer.answerText.trim().length > 0)?.answerText || ''
+
+  const { data: application, error: applicationError } = await supabase
+    .from('exchange_applications')
+    .insert({
+      exchange_id: input.exchangeId,
+      user_id: input.userProfileId,
+      proposal_text: primaryAnswer,
+      status: 'applied',
+    })
+    .select('id')
+    .single()
+
+  if (applicationError) {
+    if (applicationError.message.toLowerCase().includes('duplicate')) {
+      throw new Error('Ya aplicaste a este canje.')
+    }
+
+    throw new Error(applicationError.message)
+  }
+
+  if (!application?.id) {
+    throw new Error('Application was created without an id')
+  }
+
+  const answerRows = input.answers.map(answer => ({
+    application_id: application.id,
+    question_id: answer.questionId,
+    answer_text: answer.answerText || null,
+    answer_json: answer.answerJson && answer.answerJson.length > 0 ? answer.answerJson : null,
+  }))
+
+  if (answerRows.length > 0) {
+    const { error: answersError } = await supabase
+      .from('exchange_application_answers')
+      .insert(answerRows)
+
+    if (answersError) {
+      throw new Error(answersError.message)
+    }
+  }
+
+  return application.id as string
 }
 
 export async function fetchUserCampaignsData(userProfileId: string): Promise<{
-  applications: UserCampaignApplicationRow[]
+  applications: Array<UserCampaignApplicationRow & { answers: ExchangeApplicationAnswer[] }>
   challengeSubs: UserChallengeSubmissionRow[]
 }> {
   const [appsResult, subsResult] = await Promise.all([
@@ -96,6 +250,10 @@ export async function fetchUserCampaignsData(userProfileId: string): Promise<{
       .from('exchange_applications')
       .select(`
         *,
+        exchange_application_answers (
+          *,
+          exchange_form_questions (*)
+        ),
         exchanges (
           *,
           campaigns (*, brand_profiles (name, logo))
@@ -120,7 +278,12 @@ export async function fetchUserCampaignsData(userProfileId: string): Promise<{
   if (subsResult.error) throw new Error(subsResult.error.message)
 
   return {
-    applications: (appsResult.data || []) as unknown as UserCampaignApplicationRow[],
+    applications: ((appsResult.data || []) as UserCampaignApplicationRow[]).map(application => ({
+      ...application,
+      answers: mapApplicationAnswers(
+        (application.exchange_application_answers || []) as Array<Record<string, unknown>>
+      ),
+    })),
     challengeSubs: (subsResult.data || []) as unknown as UserChallengeSubmissionRow[],
   }
 }
