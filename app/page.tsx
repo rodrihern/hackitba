@@ -1,24 +1,22 @@
 'use client'
 
 import { useEffect } from 'react'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeftRight, Trophy, Star } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 
 export default function Home() {
   const { currentUser, isLoading } = useAuth()
-  const router = useRouter()
 
   useEffect(() => {
-    if (!isLoading && currentUser) {
-      if (currentUser.role === 'brand') {
-        router.replace('/brand/dashboard')
-      } else {
-        router.replace('/home')
-      }
+    if (isLoading || !currentUser || typeof window === 'undefined') return
+
+    const target = currentUser.role === 'brand' ? '/brand/dashboard' : '/home'
+
+    if (window.location.pathname !== target) {
+      window.location.replace(target)
     }
-  }, [currentUser, isLoading, router])
+  }, [currentUser, isLoading])
 
   if (isLoading) {
     return (

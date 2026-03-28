@@ -8,8 +8,6 @@ import {
   fetchAuthUserData,
   fetchAuthUserDataWithRoleHint,
   getAuthSession,
-  insertBrandProfile,
-  insertUserProfile,
   onAuthStateChanged,
   signInWithPassword,
   signOutAuth,
@@ -219,40 +217,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       if (!authData.user) return { success: false, error: 'No se pudo crear el usuario' }
 
-      const userId = authData.user.id
-
-      // Avoid blocking signup UI on profile bootstrap. If this fails, login/session
-      // repair path (ensureRoleProfile) will recreate missing role profiles.
       if (authData.session?.user) {
-        void (async () => {
-          if (data.role === 'user') {
-            const { error: profileError } = await insertUserProfile({
-              userId,
-              username: data.username || data.email.split('@')[0],
-              bio: '',
-              followersInstagram: 0,
-              followersTiktok: 0,
-              category: 'Lifestyle',
-              location: 'Argentina',
-            })
-
-            if (profileError) {
-              console.error('Background user profile bootstrap failed:', profileError.message)
-            }
+        try {
+          await ensureRoleProfile({
+            id: authData.user.id,
+            email: authData.user.email,
+            role: data.role,
+            username: data.username,
+            companyName: data.companyName,
+            industry: data.industry,
+          })
+        } catch (profileErr) {
+          return {
+            success: false,
+            error: profileErr instanceof Error ? profileErr.message : 'No se pudo crear el perfil inicial',
           }
-
-          if (data.role === 'brand') {
-            const { error: brandError } = await insertBrandProfile({
-              userId,
-              companyName: data.companyName || 'Mi Marca',
-              industry: data.industry || 'Otro',
-            })
-
-            if (brandError) {
-              console.error('Background brand profile bootstrap failed:', brandError.message)
-            }
-          }
-        })()
+        }
       }
 
       return { success: true }

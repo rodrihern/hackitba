@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
-import { useRouter, usePathname } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/lib/auth-context'
 import Navbar from '@/components/Navbar'
@@ -19,7 +19,6 @@ const navItems = [
 
 export default function UserLayout({ children }: { children: React.ReactNode }) {
   const { currentUser, isLoading, logout } = useAuth()
-  const router = useRouter()
   const pathname = usePathname()
 
   const handleLogout = async () => {
@@ -29,10 +28,14 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
   const unreadCount = 0 // Will be fetched dynamically in notifications page
 
   useEffect(() => {
-    if (!isLoading && (!currentUser || currentUser.role !== 'user')) {
-      router.replace('/')
+    if (isLoading || typeof window === 'undefined') return
+
+    if (!currentUser || currentUser.role !== 'user') {
+      if (window.location.pathname !== '/') {
+        window.location.replace('/')
+      }
     }
-  }, [currentUser, isLoading, router])
+  }, [currentUser, isLoading])
 
   if (isLoading || !currentUser || currentUser.role !== 'user') {
     return (

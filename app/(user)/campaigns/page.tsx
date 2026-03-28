@@ -108,12 +108,28 @@ export default function CampaignsPage() {
               const brandName = campaign.brand_profiles?.name?.trim() || 'Marca'
               const brandLogo = getBrandLogo(campaign.brand_profiles?.logo)
               const brandInitial = getBrandInitial(brandName)
+              const brandLogo = campaign.brand_profiles?.logo?.trim()
 
               return (
                 <div key={app.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center overflow-hidden">
+                        {brandLogo ? (
+                          <>
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={brandLogo}
+                              alt={campaign.brand_profiles?.name}
+                              className="w-8 h-8 object-contain"
+                              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+                            />
+                          </>
+                        ) : (
+                          <span className="text-xs font-semibold text-gray-500">
+                            {campaign.brand_profiles?.name?.charAt(0)?.toUpperCase() || 'B'}
+                          </span>
+                        )}
                         {brandLogo ? (
                           <>
                             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -195,6 +211,7 @@ export default function CampaignsPage() {
               if (!challenge) return null
               const campaign = challenge.campaigns
               const currentDay = challenge.challenge_days?.length || 1
+              const brandLogo = campaign?.brand_profiles?.logo?.trim()
               const brandName = campaign?.brand_profiles?.name?.trim() || 'Marca'
               const brandLogo = getBrandLogo(campaign?.brand_profiles?.logo)
               const brandInitial = getBrandInitial(brandName)
@@ -204,6 +221,21 @@ export default function CampaignsPage() {
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center overflow-hidden">
+                        {brandLogo ? (
+                          <>
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={brandLogo}
+                              alt={campaign?.brand_profiles?.name}
+                              className="w-8 h-8 object-contain"
+                              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+                            />
+                          </>
+                        ) : (
+                          <span className="text-xs font-semibold text-gray-500">
+                            {campaign?.brand_profiles?.name?.charAt(0)?.toUpperCase() || 'B'}
+                          </span>
+                        )}
                         {brandLogo ? (
                           <>
                             {/* eslint-disable-next-line @next/next/no-img-element */}

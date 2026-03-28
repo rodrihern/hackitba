@@ -108,26 +108,38 @@ export default function PointsPage() {
         <div className="mb-6">
           <h2 className="font-bold text-gray-900 mb-3">Puntos por marca</h2>
           <div className="grid grid-cols-3 gap-4">
-            {brandPoints.map(bp => (
-              <div key={bp.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center overflow-hidden">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={bp.brand_profiles?.logo}
-                      alt={bp.brand_profiles?.name}
-                      className="w-8 h-8 object-contain"
-                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
-                    />
+            {brandPoints.map(bp => {
+              const brandLogo = bp.brand_profiles?.logo?.trim()
+
+              return (
+                <div key={bp.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-10 h-10 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center overflow-hidden">
+                      {brandLogo ? (
+                        <>
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={brandLogo}
+                            alt={bp.brand_profiles?.name}
+                            className="w-8 h-8 object-contain"
+                            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+                          />
+                        </>
+                      ) : (
+                        <span className="text-xs font-semibold text-gray-500">
+                          {bp.brand_profiles?.name?.charAt(0)?.toUpperCase() || 'B'}
+                        </span>
+                      )}
+                    </div>
+                    <div>
+                      <div className="font-semibold text-gray-900">{bp.brand_profiles?.name}</div>
+                      <div className="text-xs text-gray-400">Puntos disponibles</div>
+                    </div>
                   </div>
-                  <div>
-                    <div className="font-semibold text-gray-900">{bp.brand_profiles?.name}</div>
-                    <div className="text-xs text-gray-400">Puntos disponibles</div>
-                  </div>
+                  <div className="text-3xl font-extrabold text-indigo-600">{bp.points.toLocaleString()}</div>
                 </div>
-                <div className="text-3xl font-extrabold text-indigo-600">{bp.points.toLocaleString()}</div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </div>
       )}

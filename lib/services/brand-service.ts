@@ -1,4 +1,5 @@
 import { mapCampaign, mapExchangeApplicationAnswer, mapUserProfile } from '@/lib/mappers'
+import { retryOnTransientFetch } from '@/lib/retry'
 import { supabase } from '@/lib/supabase'
 import type { ApplicationStatus, Campaign, ExchangeApplicationAnswer, UserProfile } from '@/lib/types'
 
@@ -73,59 +74,61 @@ export interface ExchangeDecisionResult {
 }
 
 export async function fetchBrandCampaigns(brandId: string): Promise<Campaign[]> {
-  const { data, error } = await supabase
-    .from('campaigns')
-    .select(`
-      *,
-      brand_profiles (id, name, logo),
-      exchanges (
+  return retryOnTransientFetch(async () => {
+    const { data, error } = await supabase
+      .from('campaigns')
+      .select(`
         *,
-        exchange_form_questions (*)
-      ),
-      challenges (*, challenge_days (*))
-    `)
-    .eq('brand_id', brandId)
-    .order('created_at', { ascending: false })
+        brand_profiles (id, name, logo),
+        exchanges (
+          *,
+          exchange_form_questions (*)
+        ),
+        challenges (*, challenge_days (*))
+      `)
+      .eq('brand_id', brandId)
+      .order('created_at', { ascending: false })
 
-  if (error) throw new Error(error.message)
+    if (error) throw new Error(error.message)
 
-  const campaigns = (data || []).map(row => mapCampaign(row as Record<string, unknown>))
-  const exchangeIds = campaigns
-    .flatMap(campaign => (campaign.exchange ? [campaign.exchange.id] : []))
-    .filter(Boolean)
+    const campaigns = (data || []).map(row => mapCampaign(row as Record<string, unknown>))
+    const exchangeIds = campaigns
+      .flatMap(campaign => (campaign.exchange ? [campaign.exchange.id] : []))
+      .filter(Boolean)
 
-  if (exchangeIds.length === 0) {
-    return campaigns
-  }
-
-  const { data: applicationRows, error: appError } = await supabase
-    .from('exchange_applications')
-    .select('exchange_id, status')
-    .in('exchange_id', exchangeIds)
-
-  if (appError) throw new Error(appError.message)
-
-  const counts = new Map<string, number>()
-  const acceptedCounts = new Map<string, number>()
-
-  for (const row of (applicationRows || []) as ExchangeCountRow[]) {
-    counts.set(row.exchange_id, (counts.get(row.exchange_id) || 0) + 1)
-    if (row.status === 'accepted') {
-      acceptedCounts.set(row.exchange_id, (acceptedCounts.get(row.exchange_id) || 0) + 1)
+    if (exchangeIds.length === 0) {
+      return campaigns
     }
-  }
 
-  return campaigns.map(campaign => {
-    if (!campaign.exchange) return campaign
+    const { data: applicationRows, error: appError } = await supabase
+      .from('exchange_applications')
+      .select('exchange_id, status')
+      .in('exchange_id', exchangeIds)
 
-    return {
-      ...campaign,
-      exchange: {
-        ...campaign.exchange,
-        applicantsCount: counts.get(campaign.exchange.id) || 0,
-        acceptedApplicantsCount: acceptedCounts.get(campaign.exchange.id) || 0,
-      },
+    if (appError) throw new Error(appError.message)
+
+    const counts = new Map<string, number>()
+    const acceptedCounts = new Map<string, number>()
+
+    for (const row of (applicationRows || []) as ExchangeCountRow[]) {
+      counts.set(row.exchange_id, (counts.get(row.exchange_id) || 0) + 1)
+      if (row.status === 'accepted') {
+        acceptedCounts.set(row.exchange_id, (acceptedCounts.get(row.exchange_id) || 0) + 1)
+      }
     }
+
+    return campaigns.map(campaign => {
+      if (!campaign.exchange) return campaign
+
+      return {
+        ...campaign,
+        exchange: {
+          ...campaign.exchange,
+          applicantsCount: counts.get(campaign.exchange.id) || 0,
+          acceptedApplicantsCount: acceptedCounts.get(campaign.exchange.id) || 0,
+        },
+      }
+    })
   })
 }
 
@@ -134,35 +137,37 @@ export async function fetchBrandDashboardData(brandId: string): Promise<{
   totalApplicants: number
   acceptedCount: number
 }> {
-  const campaigns = await fetchBrandCampaigns(brandId)
-  const exchangeIds = campaigns
-    .flatMap(c => (c.exchange ? [c.exchange.id] : []))
-    .filter(Boolean)
+  return retryOnTransientFetch(async () => {
+    const campaigns = await fetchBrandCampaigns(brandId)
+    const exchangeIds = campaigns
+      .flatMap(c => (c.exchange ? [c.exchange.id] : []))
+      .filter(Boolean)
 
-  if (exchangeIds.length === 0) {
-    return { campaigns, totalApplicants: 0, acceptedCount: 0 }
-  }
+    if (exchangeIds.length === 0) {
+      return { campaigns, totalApplicants: 0, acceptedCount: 0 }
+    }
 
-  const { count: totalCount, error: totalError } = await supabase
-    .from('exchange_applications')
-    .select('*', { count: 'exact', head: true })
-    .in('exchange_id', exchangeIds)
+    const { count: totalCount, error: totalError } = await supabase
+      .from('exchange_applications')
+      .select('*', { count: 'exact', head: true })
+      .in('exchange_id', exchangeIds)
 
-  if (totalError) throw new Error(totalError.message)
+    if (totalError) throw new Error(totalError.message)
 
-  const { count: acceptedCount, error: acceptedError } = await supabase
-    .from('exchange_applications')
-    .select('*', { count: 'exact', head: true })
-    .in('exchange_id', exchangeIds)
-    .eq('status', 'accepted')
+    const { count: acceptedCount, error: acceptedError } = await supabase
+      .from('exchange_applications')
+      .select('*', { count: 'exact', head: true })
+      .in('exchange_id', exchangeIds)
+      .eq('status', 'accepted')
 
-  if (acceptedError) throw new Error(acceptedError.message)
+    if (acceptedError) throw new Error(acceptedError.message)
 
-  return {
-    campaigns,
-    totalApplicants: totalCount || 0,
-    acceptedCount: acceptedCount || 0,
-  }
+    return {
+      campaigns,
+      totalApplicants: totalCount || 0,
+      acceptedCount: acceptedCount || 0,
+    }
+  })
 }
 
 export async function updateCampaignStatus(id: string, status: 'active' | 'closed') {
