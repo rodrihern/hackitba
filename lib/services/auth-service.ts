@@ -27,8 +27,15 @@ export async function signInWithPassword(email: string, password: string) {
 }
 
 export async function signOutAuth() {
-  const { error } = await supabase.auth.signOut()
-  if (error) throw new Error(error.message)
+  // Ensure local session is always cleared in this browser.
+  const { error: localError } = await supabase.auth.signOut({ scope: 'local' })
+  if (localError) throw new Error(localError.message)
+
+  // Best-effort global revoke for other devices/sessions.
+  const { error: globalError } = await supabase.auth.signOut({ scope: 'global' })
+  if (globalError) {
+    console.warn('Global sign out warning:', globalError.message)
+  }
 }
 
 export async function signUpAuth(input: {
