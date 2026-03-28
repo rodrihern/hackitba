@@ -622,6 +622,14 @@ create policy "applications: marca actualiza estado" on exchange_applications
     )
   );
 
+create policy "applications: usuario actualiza propias" on exchange_applications
+  for update using (
+    user_id in (select id from user_profiles where user_id = auth.uid())
+  )
+  with check (
+    user_id in (select id from user_profiles where user_id = auth.uid())
+  );
+
 -- exchange_form_questions: visibles para campañas activas y gestionables por la marca dueña
 create policy "exchange_form_questions: lectura según campaña" on exchange_form_questions
   for select using (

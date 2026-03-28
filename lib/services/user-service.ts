@@ -71,6 +71,7 @@ interface ExchangeApplicationLookupRow {
   exchange_id: string
   status: ApplicationStatus
   user_id: string
+  video_url?: string | null
 }
 
 function mapApplicationAnswers(rows: Array<Record<string, unknown>>): ExchangeApplicationAnswer[] {
@@ -92,7 +93,7 @@ async function augmentCampaignsWithExchangeStats(
 
   const { data: applicationRows, error } = await supabase
     .from('exchange_applications')
-    .select('id, exchange_id, status, user_id')
+    .select('id, exchange_id, status, user_id, video_url')
     .in('exchange_id', exchangeIds)
 
   if (error) {
@@ -102,6 +103,8 @@ async function augmentCampaignsWithExchangeStats(
   const counts = new Map<string, number>()
   const acceptedCounts = new Map<string, number>()
   const currentUserStatuses = new Map<string, ApplicationStatus>()
+  const currentUserApplicationIds = new Map<string, string>()
+  const currentUserApplicationVideoUrls = new Map<string, string | undefined>()
 
   for (const row of (applicationRows || []) as ExchangeApplicationLookupRow[]) {
     counts.set(row.exchange_id, (counts.get(row.exchange_id) || 0) + 1)
@@ -110,6 +113,8 @@ async function augmentCampaignsWithExchangeStats(
     }
     if (userProfileId && row.user_id === userProfileId) {
       currentUserStatuses.set(row.exchange_id, row.status)
+      currentUserApplicationIds.set(row.exchange_id, row.id)
+      currentUserApplicationVideoUrls.set(row.exchange_id, row.video_url || undefined)
     }
   }
 
@@ -119,6 +124,8 @@ async function augmentCampaignsWithExchangeStats(
     return {
       ...campaign,
       currentUserApplicationStatus: currentUserStatuses.get(campaign.exchange.id),
+      currentUserApplicationId: currentUserApplicationIds.get(campaign.exchange.id),
+      currentUserApplicationVideoUrl: currentUserApplicationVideoUrls.get(campaign.exchange.id),
       exchange: {
         ...campaign.exchange,
         applicantsCount: counts.get(campaign.exchange.id) || 0,
@@ -319,18 +326,29 @@ export async function createChallengeSubmission(input: {
   return submission.id as string
 }
 
-export async function updateExchangeApplicationVideoUrl(applicationId: string, videoUrl: string) {
+export async function updateExchangeApplicationVideoUrl(applicationId: string, videoUrl: string | null) {
   if (!applicationId) {
     throw new Error('No se pudo identificar la aplicación.')
   }
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('exchange_applications')
     .update({ video_url: videoUrl || null })
     .eq('id', applicationId)
+    .select('id, video_url')
+    .single()
 
   if (error) {
     throw new Error(error.message)
+  }
+
+  if (!data?.id) {
+    throw new Error('No se pudo actualizar el link del video.')
+  }
+
+  return {
+    id: data.id as string,
+    videoUrl: (data.video_url as string | null) || null,
   }
 }
 

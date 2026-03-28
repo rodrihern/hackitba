@@ -70,12 +70,7 @@ export default function CampaignDetailPage() {
       return
     }
 
-    // Get application ID for this user
-    const userApplication = (campaign.exchange as any)?.exchange_applications?.find(
-      (app: any) => app.user_id === profile.id
-    )
-
-    if (!userApplication) {
+    if (!campaign.currentUserApplicationId) {
       setVideoError('No se encontró tu aplicación')
       return
     }
@@ -84,26 +79,32 @@ export default function CampaignDetailPage() {
     setVideoError('')
 
     try {
-      await updateExchangeApplicationVideoUrl(userApplication.id, url)
+      const updated = await updateExchangeApplicationVideoUrl(campaign.currentUserApplicationId, url)
       setVideoSuccess(true)
-      
-      // Update local state
-      setCampaign(prev => {
-        if (!prev || !prev.exchange) return prev
-        return {
-          ...prev,
-          exchange: {
-            ...prev.exchange,
-            exchange_applications: (prev.exchange as any).exchange_applications?.map((app: any) =>
-              app.id === userApplication.id ? { ...app, video_url: url } : app
-            )
-          }
-        }
-      })
+      setCampaign(prev => (prev ? { ...prev, currentUserApplicationVideoUrl: updated.videoUrl || undefined } : prev))
+      setVideoUrl(updated.videoUrl || '')
 
       setTimeout(() => setVideoSuccess(false), 3000)
     } catch (err) {
       setVideoError(err instanceof Error ? err.message : 'Error al guardar')
+    } finally {
+      setIsSavingVideo(false)
+    }
+  }
+
+  const handleDeleteVideoUrl = async () => {
+    if (!campaign?.currentUserApplicationId) return
+
+    setIsSavingVideo(true)
+    setVideoError('')
+
+    try {
+      await updateExchangeApplicationVideoUrl(campaign.currentUserApplicationId, null)
+      setCampaign(prev => (prev ? { ...prev, currentUserApplicationVideoUrl: undefined } : prev))
+      setVideoUrl('')
+      setVideoSuccess(false)
+    } catch (err) {
+      setVideoError(err instanceof Error ? err.message : 'Error al eliminar')
     } finally {
       setIsSavingVideo(false)
     }
@@ -147,11 +148,8 @@ export default function CampaignDetailPage() {
     ? campaign.exchange.acceptedApplicantsCount >= campaign.exchange.slots
     : false
 
-    // Get user's video URL if they've submitted one
-    const userApplication = (campaign.exchange as any)?.exchange_applications?.find(
-      (app: any) => app.user_id === profile?.id
-    )
-    const existingVideoUrl = userApplication?.video_url
+  const existingVideoUrl = campaign.currentUserApplicationVideoUrl
+  const firstChallengeDay = campaign.challenge?.days[0]
 
   return (
     <div className="p-8 max-w-4xl mx-auto">
@@ -317,7 +315,7 @@ export default function CampaignDetailPage() {
           {isExchange && isAccepted && (
             <div className="mb-6">
               {existingVideoUrl ? (
-                <div className="bg-indigo-50 rounded-2xl p-6 border border-indigo-100">
+                <div className="bg-indigo-50 rounded-2xl p-6 border border-indigo-100 space-y-4">
                   <div className="flex items-start justify-between">
                     <div>
                       <p className="text-sm font-semibold text-indigo-900 mb-2">
@@ -336,6 +334,43 @@ export default function CampaignDetailPage() {
                         })()}</span>
                         <ExternalLink size={16} />
                       </a>
+                    </div>
+                  </div>
+                  <div className="space-y-3 rounded-2xl border border-indigo-200 bg-white p-4">
+                    <input
+                      type="url"
+                      value={videoUrl}
+                      onChange={(e) => {
+                        setVideoUrl(e.target.value)
+                        setVideoError('')
+                      }}
+                      placeholder={existingVideoUrl}
+                      className="w-full text-sm border border-indigo-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+
+                    {videoError && (
+                      <p className="text-xs text-red-600">{videoError}</p>
+                    )}
+
+                    {videoSuccess && (
+                      <p className="text-xs text-green-600">✓ Video guardado correctamente</p>
+                    )}
+
+                    <div className="flex gap-3">
+                      <button
+                        onClick={handleSaveVideoUrl}
+                        disabled={isSavingVideo || !videoUrl.trim()}
+                        className="flex-1 bg-indigo-600 text-white font-semibold py-3 rounded-xl hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {isSavingVideo ? 'Guardando...' : 'Actualizar link'}
+                      </button>
+                      <button
+                        onClick={handleDeleteVideoUrl}
+                        disabled={isSavingVideo}
+                        className="px-4 py-3 rounded-xl border border-red-200 text-red-600 font-semibold hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Eliminar
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -440,10 +475,10 @@ export default function CampaignDetailPage() {
           challengeId={campaign.challenge.id}
           challengeTitle={campaign.title}
           brandName={campaign.brandName}
-          dayId={(campaign.challenge as any).challenge_days?.[0]?.id || ''}
+          dayId={firstChallengeDay?.id || ''}
           dayNumber={1}
-          dayTitle={(campaign.challenge as any).challenge_days?.[0]?.title || 'Día 1'}
-          dayInstructions={(campaign.challenge as any).challenge_days?.[0]?.instructions}
+          dayTitle={firstChallengeDay?.title || 'Día 1'}
+          dayInstructions={firstChallengeDay?.instructions}
           userProfileId={profile?.id}
           open={showSubmitModal}
           onClose={() => setShowSubmitModal(false)}

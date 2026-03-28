@@ -48,6 +48,8 @@ export interface Campaign {
   status: CampaignStatus
   createdAt: string
   currentUserApplicationStatus?: ApplicationStatus
+  currentUserApplicationId?: string
+  currentUserApplicationVideoUrl?: string
   exchange?: Exchange
   challenge?: Challenge
 }
