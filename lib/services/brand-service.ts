@@ -39,6 +39,7 @@ export interface ApplicationRow {
   id: string
   status: ApplicationStatus
   proposal_text: string
+  video_url?: string
   created_at: string
   user_profiles: Record<string, unknown>
   exchange_application_answers?: Array<Record<string, unknown>>
@@ -48,6 +49,7 @@ export interface SubmissionRow {
   id: string
   submission_url: string
   submission_text: string
+  video_url?: string
   score?: number
   created_at: string
   user_profiles: Record<string, unknown>

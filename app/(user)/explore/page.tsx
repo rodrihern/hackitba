@@ -138,6 +138,7 @@ export default function ExplorePage() {
             <CampaignCard
               key={campaign.id}
               campaign={campaign}
+              href={`/campaign/${campaign.id}`}
               onApply={campaign.type === 'exchange' ? () => setSelectedExchange(campaign) : undefined}
             />
           ))}

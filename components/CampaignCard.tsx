@@ -146,26 +146,39 @@ export default function CampaignCard({ campaign, href, onApply, showBrand = true
         {/* CTA */}
         <div className="mt-4 flex gap-2">
           {isExchange && onApply && isAccepted ? (
-            <div className="flex-1 rounded-xl border border-green-200 bg-green-50 px-4 py-2.5 text-sm font-semibold text-green-700">
+            <Link
+              href={href || '#'}
+              className="flex-1 rounded-xl border border-green-200 bg-green-50 px-4 py-2.5 text-sm font-semibold text-green-700 text-center"
+            >
               <div className="flex items-center justify-center gap-2">
                 <Check size={14} />
                 <span>Colaboración aceptada</span>
               </div>
-            </div>
-          ) : isExchange && onApply ? (
-            <button
-              onClick={onApply}
-              disabled={applyDisabled}
-              className={`flex-1 text-sm font-semibold py-2.5 rounded-xl transition-colors disabled:cursor-not-allowed ${
-                currentStatus === 'rejected'
-                  ? 'bg-red-100 text-red-700 disabled:bg-red-100'
-                  : currentStatus === 'applied' || currentStatus === 'invited'
-                  ? 'bg-gray-100 text-gray-500 disabled:bg-gray-100'
-                  : 'bg-indigo-600 text-white hover:bg-indigo-700 disabled:bg-indigo-200'
-              }`}
-            >
-              {primaryLabel}
-            </button>
+            </Link>
+          ) : isExchange && onApply && !isAccepted ? (
+            <>
+              <button
+                onClick={onApply}
+                disabled={applyDisabled}
+                className={`flex-1 text-sm font-semibold py-2.5 rounded-xl transition-colors disabled:cursor-not-allowed ${
+                  currentStatus === 'rejected'
+                    ? 'bg-red-100 text-red-700 disabled:bg-red-100'
+                    : currentStatus === 'applied' || currentStatus === 'invited'
+                    ? 'bg-gray-100 text-gray-500 disabled:bg-gray-100'
+                    : 'bg-indigo-600 text-white hover:bg-indigo-700 disabled:bg-indigo-200'
+                }`}
+              >
+                {primaryLabel}
+              </button>
+              {href && (
+                <Link
+                  href={href}
+                  className="px-4 text-center border border-gray-200 text-gray-600 text-sm font-semibold py-2.5 rounded-xl hover:bg-gray-50 transition-colors"
+                >
+                  Ver
+                </Link>
+              )}
+            </>
           ) : href ? (
             <Link
               href={href}
@@ -181,15 +194,6 @@ export default function CampaignCard({ campaign, href, onApply, showBrand = true
             >
               Próximamente
             </button>
-          )}
-
-          {href && isExchange && onApply && (
-            <Link
-              href={href}
-              className="px-4 text-center border border-gray-200 text-gray-600 text-sm font-semibold py-2.5 rounded-xl hover:bg-gray-50 transition-colors"
-            >
-              Ver
-            </Link>
           )}
         </div>
       </div>

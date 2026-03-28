@@ -5,9 +5,11 @@ export const dynamic = 'force-dynamic'
 import { useState, useEffect, useCallback } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
+import { Video, ExternalLink } from 'lucide-react'
 import { mapUserProfile } from '@/lib/mappers'
 import LeaderboardRow from '@/components/LeaderboardRow'
 import type { ApplicationStatus } from '@/lib/types'
+import { parseVideoUrl, getPlatformName } from '@/lib/utils/video-url-parser'
 import {
   fetchCampaignDetail,
   mapBrandApplicationAnswers,
@@ -298,6 +300,28 @@ export default function CampaignDetailPage() {
                       </div>
                     )}
 
+                    {app.video_url && (
+                      <div className="mb-3">
+                        {(() => {
+                          const parsed = parseVideoUrl(app.video_url)
+                          return (
+                            <a
+                              href={app.video_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-2 text-sm text-indigo-600 hover:text-indigo-700 bg-indigo-50 rounded-xl px-4 py-3 hover:bg-indigo-100 transition-colors"
+                            >
+                              <Video size={16} />
+                              <span className="font-medium">
+                                Ver video en {parsed.isValid ? getPlatformName(parsed.platform) : 'plataforma'}
+                              </span>
+                              <ExternalLink size={14} className="ml-auto" />
+                            </a>
+                          )
+                        })()}
+                      </div>
+                    )}
+
                     {isTerminalStatus ? (
                       <div className={`rounded-xl px-4 py-3 text-sm font-medium ${
                         currentStatus === 'accepted'
@@ -389,17 +413,36 @@ export default function CampaignDetailPage() {
                           <span className="ml-auto text-sm font-bold text-indigo-600">{sub.score} pts</span>
                         )}
                       </div>
-                      <p className="text-sm text-gray-600 mb-2">{sub.submission_text}</p>
-                      {sub.submission_url && (
-                        <a
-                          href={sub.submission_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-xs text-indigo-500 hover:underline"
-                        >
-                          Ver contenido →
-                        </a>
+
+                      {sub.submission_text && (
+                        <p className="text-sm text-gray-600 mb-2">{sub.submission_text}</p>
                       )}
+
+                      <div className="flex flex-wrap gap-2">
+                        {sub.video_url && (
+                          <a
+                            href={sub.video_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 text-xs text-indigo-600 hover:text-indigo-700 bg-indigo-50 rounded-lg px-3 py-1.5 hover:bg-indigo-100 transition-colors"
+                          >
+                            <Video size={14} />
+                            <span>Ver video</span>
+                            <ExternalLink size={12} />
+                          </a>
+                        )}
+                        {sub.submission_url && (
+                          <a
+                            href={sub.submission_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 text-xs text-gray-600 hover:text-gray-700 bg-gray-100 rounded-lg px-3 py-1.5 hover:bg-gray-200 transition-colors"
+                          >
+                            <ExternalLink size={14} />
+                            <span>Ver contenido</span>
+                          </a>
+                        )}
+                      </div>
                     </div>
                   )
                 })}

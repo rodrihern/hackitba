@@ -3,9 +3,16 @@
 export const dynamic = 'force-dynamic'
 
 import { useState, useEffect } from 'react'
+import { Video, ExternalLink } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 import type { ApplicationStatus, UserProfile } from '@/lib/types'
-import { fetchUserCampaignsData, type UserCampaignApplicationRow, type UserChallengeSubmissionRow } from '@/lib/services/user-service'
+import { 
+  fetchUserCampaignsData, 
+  updateExchangeApplicationVideoUrl,
+  type UserCampaignApplicationRow, 
+  type UserChallengeSubmissionRow 
+} from '@/lib/services/user-service'
+import { isValidVideoUrl, parseVideoUrl, getPlatformName } from '@/lib/utils/video-url-parser'
 
 const statusLabels: Record<ApplicationStatus, string> = {
   applied: 'Aplicada',
@@ -40,6 +47,10 @@ export default function CampaignsPage() {
   const [applications, setApplications] = useState<UserCampaignApplicationRow[]>([])
   const [challengeSubs, setChallengeSubs] = useState<UserChallengeSubmissionRow[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [videoUrls, setVideoUrls] = useState<Record<string, string>>({})
+  const [savingVideo, setSavingVideo] = useState<Record<string, boolean>>({})
+  const [videoErrors, setVideoErrors] = useState<Record<string, string>>({})
+  const [videoSuccess, setVideoSuccess] = useState<Record<string, boolean>>({})
 
   useEffect(() => {
     async function fetchData() {
@@ -59,6 +70,44 @@ export default function CampaignsPage() {
 
     fetchData()
   }, [currentUser])
+
+  const handleSaveVideoUrl = async (appId: string) => {
+    const url = videoUrls[appId]?.trim()
+    
+    if (!url) {
+      setVideoErrors({ ...videoErrors, [appId]: 'Por favor ingresá una URL' })
+      return
+    }
+
+    if (!isValidVideoUrl(url)) {
+      setVideoErrors({ ...videoErrors, [appId]: 'URL no válida. Usá un link de Instagram, TikTok o YouTube.' })
+      return
+    }
+
+    setSavingVideo({ ...savingVideo, [appId]: true })
+    setVideoErrors({ ...videoErrors, [appId]: '' })
+
+    try {
+      await updateExchangeApplicationVideoUrl(appId, url)
+      setVideoSuccess({ ...videoSuccess, [appId]: true })
+      
+      // Update local state to show the video URL
+      setApplications(prev => prev.map(app => 
+        app.id === appId ? { ...app, video_url: url } : app
+      ))
+
+      setTimeout(() => {
+        setVideoSuccess({ ...videoSuccess, [appId]: false })
+      }, 3000)
+    } catch (err) {
+      setVideoErrors({ 
+        ...videoErrors, 
+        [appId]: err instanceof Error ? err.message : 'Error al guardar' 
+      })
+    } finally {
+      setSavingVideo({ ...savingVideo, [appId]: false })
+    }
+  }
 
   if (isLoading) {
     return (
@@ -161,10 +210,69 @@ export default function CampaignsPage() {
                   )}
 
                   {app.status === 'accepted' && (
-                    <div className="mt-3 bg-green-50 rounded-xl px-4 py-3 flex items-center gap-2">
-                      <span className="text-green-600">✅</span>
-                      <span className="text-sm text-green-700 font-medium">Tu aplicación fue aceptada. La marca te va a contactar por email directamente para seguir con la colaboración.</span>
-                    </div>
+                    <>
+                      <div className="mt-3 bg-green-50 rounded-xl px-4 py-3 flex items-center gap-2">
+                        <span className="text-green-600">✅</span>
+                        <span className="text-sm text-green-700 font-medium">
+                          Tu aplicación fue aceptada. La marca te va a contactar por email directamente para seguir con la colaboración.
+                        </span>
+                      </div>
+
+                      {app.video_url ? (
+                        <div className="mt-3 bg-indigo-50 rounded-xl px-4 py-3">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-xs font-semibold text-indigo-700 mb-1">Video compartido</p>
+                              <a
+                                href={app.video_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1.5 text-sm text-indigo-600 hover:text-indigo-700"
+                              >
+                                <Video size={14} />
+                                <span>{(() => {
+                                  const parsed = parseVideoUrl(app.video_url)
+                                  return parsed.isValid ? `Ver en ${getPlatformName(parsed.platform)}` : 'Ver video'
+                                })()}</span>
+                                <ExternalLink size={12} />
+                              </a>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="mt-3 bg-blue-50 rounded-xl px-4 py-3">
+                          <p className="text-xs font-semibold text-blue-700 mb-2">
+                            <Video className="inline-block mr-1 mb-0.5" size={14} />
+                            Compartí tu video con la marca
+                          </p>
+                          <p className="text-xs text-blue-600 mb-3">
+                            Agregá el link de tu contenido publicado (Instagram, TikTok o YouTube) para que la marca pueda ver los resultados.
+                          </p>
+                          <div className="space-y-2">
+                            <input
+                              type="url"
+                              value={videoUrls[app.id] || ''}
+                              onChange={(e) => setVideoUrls({ ...videoUrls, [app.id]: e.target.value })}
+                              placeholder="https://www.instagram.com/p/... o https://www.tiktok.com/..."
+                              className="w-full text-sm border border-blue-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            />
+                            {videoErrors[app.id] && (
+                              <p className="text-xs text-red-600">{videoErrors[app.id]}</p>
+                            )}
+                            {videoSuccess[app.id] && (
+                              <p className="text-xs text-green-600">✓ Video guardado correctamente</p>
+                            )}
+                            <button
+                              onClick={() => handleSaveVideoUrl(app.id)}
+                              disabled={savingVideo[app.id]}
+                              className="w-full text-sm bg-indigo-600 text-white font-medium py-2 rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
+                            >
+                              {savingVideo[app.id] ? 'Guardando...' : 'Guardar link del video'}
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </>
                   )}
 
                   {app.status === 'rejected' && (

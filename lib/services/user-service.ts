@@ -13,6 +13,7 @@ export interface UserCampaignApplicationRow {
   id: string
   status: ApplicationStatus
   proposal_text: string
+  video_url?: string
   created_at: string
   answers?: ExchangeApplicationAnswer[]
   exchange_application_answers?: Array<Record<string, unknown>>
@@ -168,6 +169,31 @@ export async function fetchActiveCampaigns(userProfileId?: string): Promise<Camp
   })
 }
 
+export async function fetchCampaignById(campaignId: string, userProfileId?: string): Promise<Campaign> {
+  return retryOnTransientFetch(async () => {
+    const { data, error } = await supabase
+      .from('campaigns')
+      .select(`
+        *,
+        brand_profiles (id, name, logo),
+        exchanges (
+          *,
+          exchange_form_questions (*),
+          exchange_applications (*)
+        ),
+        challenges (*, challenge_days (*))
+      `)
+      .eq('id', campaignId)
+      .single()
+
+    if (error) throw new Error(error.message)
+    if (!data) throw new Error('Campaña no encontrada')
+    
+    const campaigns = await augmentCampaignsWithExchangeStats([data] as Record<string, unknown>[], userProfileId)
+    return campaigns[0]
+  })
+}
+
 export async function fetchExchangeFormQuestions(exchangeId: string): Promise<ExchangeFormQuestion[]> {
   return retryOnTransientFetch(async () => {
     const { data, error } = await supabase
@@ -246,6 +272,81 @@ export async function createExchangeApplication(input: {
   }
 
   return application.id as string
+}
+
+export async function createChallengeSubmission(input: {
+  challengeId: string
+  dayId: string
+  userProfileId: string
+  submissionUrl?: string
+  submissionText?: string
+  videoUrl?: string
+}) {
+  if (!input.challengeId || !input.dayId) {
+    throw new Error('No se pudo detectar el reto o día para esta entrega.')
+  }
+
+  if (!input.submissionUrl && !input.submissionText && !input.videoUrl) {
+    throw new Error('Debés agregar al menos un link, texto o video para tu entrega.')
+  }
+
+  const { data: submission, error: submissionError } = await supabase
+    .from('challenge_submissions')
+    .insert({
+      challenge_id: input.challengeId,
+      day_id: input.dayId,
+      user_id: input.userProfileId,
+      submission_url: input.submissionUrl || null,
+      submission_text: input.submissionText || null,
+      video_url: input.videoUrl || null,
+    })
+    .select('id')
+    .single()
+
+  if (submissionError) {
+    if (submissionError.message.toLowerCase().includes('duplicate') || 
+        submissionError.message.toLowerCase().includes('unique')) {
+      throw new Error('Ya enviaste tu entrega para este día.')
+    }
+
+    throw new Error(submissionError.message)
+  }
+
+  if (!submission?.id) {
+    throw new Error('No se pudo crear la entrega')
+  }
+
+  return submission.id as string
+}
+
+export async function updateExchangeApplicationVideoUrl(applicationId: string, videoUrl: string) {
+  if (!applicationId) {
+    throw new Error('No se pudo identificar la aplicación.')
+  }
+
+  const { error } = await supabase
+    .from('exchange_applications')
+    .update({ video_url: videoUrl || null })
+    .eq('id', applicationId)
+
+  if (error) {
+    throw new Error(error.message)
+  }
+}
+
+export async function updateChallengeSubmissionVideoUrl(submissionId: string, videoUrl: string) {
+  if (!submissionId) {
+    throw new Error('No se pudo identificar la entrega.')
+  }
+
+  const { error } = await supabase
+    .from('challenge_submissions')
+    .update({ video_url: videoUrl || null })
+    .eq('id', submissionId)
+
+  if (error) {
+    throw new Error(error.message)
+  }
 }
 
 export async function fetchUserCampaignsData(userProfileId: string): Promise<{

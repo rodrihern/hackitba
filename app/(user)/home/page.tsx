@@ -152,7 +152,7 @@ export default function HomePage() {
                 key={campaign.id}
                 campaign={campaign}
                 onApply={() => setSelectedExchange(campaign)}
-                href={`/explore`}
+                href={`/campaign/${campaign.id}`}
               />
             ))}
           </div>
@@ -178,7 +178,7 @@ export default function HomePage() {
               <CampaignCard
                 key={campaign.id}
                 campaign={campaign}
-                href="/explore"
+                href={`/campaign/${campaign.id}`}
               />
             ))}
           </div>
