@@ -4,7 +4,9 @@ import React, { createContext, useContext, useState, useEffect } from 'react'
 import type { UserRole, UserProfile, BrandProfile } from './types'
 import type { Session } from '@supabase/supabase-js'
 import {
+  ensureRoleProfile,
   fetchAuthUserData,
+  fetchAuthUserDataWithRoleHint,
   getAuthSession,
   insertBrandProfile,
   insertUserProfile,
@@ -14,7 +16,6 @@ import {
   signUpAuth,
   updateBrandProfileById,
   updateUserProfileById,
-  upsertBaseProfile,
   type AuthUser,
 } from '@/lib/services/auth-service'
 
@@ -54,7 +55,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     getAuthSession().then(async ({ data: { session } }) => {
       setSession(session)
       if (session?.user) {
-        const userData = await fetchAuthUserData(session.user.id)
+        const roleHint = session.user.user_metadata?.role
+        let userData = await fetchAuthUserDataWithRoleHint(session.user.id, roleHint)
+
+        if (!userData) {
+          try {
+            const repaired = await ensureRoleProfile({
+              id: session.user.id,
+              email: session.user.email,
+              role: roleHint,
+              companyName: session.user.user_metadata?.companyName,
+              industry: session.user.user_metadata?.industry,
+            })
+            if (repaired) {
+              userData = await fetchAuthUserDataWithRoleHint(session.user.id, roleHint)
+            }
+          } catch (err) {
+            console.error('Error repairing missing profile on session restore:', err)
+          }
+        }
+
         setCurrentUser(userData)
       }
       setIsLoading(false)
@@ -64,7 +84,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data: { subscription } } = onAuthStateChanged(async (_event, session) => {
       setSession(session)
       if (session?.user) {
-        const userData = await fetchAuthUserData(session.user.id)
+        const roleHint = session.user.user_metadata?.role
+        let userData = await fetchAuthUserDataWithRoleHint(session.user.id, roleHint)
+
+        if (!userData) {
+          try {
+            const repaired = await ensureRoleProfile({
+              id: session.user.id,
+              email: session.user.email,
+              role: roleHint,
+              companyName: session.user.user_metadata?.companyName,
+              industry: session.user.user_metadata?.industry,
+            })
+            if (repaired) {
+              userData = await fetchAuthUserDataWithRoleHint(session.user.id, roleHint)
+            }
+          } catch (err) {
+            console.error('Error repairing missing profile on auth change:', err)
+          }
+        }
+
         setCurrentUser(userData)
       } else {
         setCurrentUser(null)
@@ -78,8 +117,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data, error } = await signInWithPassword(email, password)
     if (error) return { success: false, error: error.message }
     if (!data.user) return { success: false, error: 'No se pudo iniciar sesión' }
-    const userData = await fetchAuthUserData(data.user.id)
-    if (!userData) return { success: false, error: 'No se encontró el perfil. Intentá registrarte nuevamente.' }
+
+    const roleHint = data.user.user_metadata?.role
+    let userData = await fetchAuthUserDataWithRoleHint(data.user.id, roleHint)
+
+    if (!userData) {
+      try {
+        const repaired = await ensureRoleProfile({
+          id: data.user.id,
+          email: data.user.email,
+          role: roleHint,
+          companyName: data.user.user_metadata?.companyName,
+          industry: data.user.user_metadata?.industry,
+        })
+
+        if (repaired) {
+          userData = await fetchAuthUserDataWithRoleHint(data.user.id, roleHint)
+        }
+      } catch (err) {
+        return { success: false, error: err instanceof Error ? err.message : 'No se pudo crear el perfil' }
+      }
+    }
+
+    if (!userData) {
+      return {
+        success: false,
+        error: 'La cuenta existe pero no tiene perfil de app. Falta configurar trigger/policies en Supabase para crear profile al registrarse.',
+      }
+    }
     setCurrentUser(userData)
     return { success: true, role: userData.role }
   }
@@ -101,39 +166,62 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const signup = async (data: SignupData): Promise<{ success: boolean; error?: string }> => {
-    const { data: authData, error } = await signUpAuth(data.email, data.password, data.role)
+    try {
+      const { data: authData, error } = await signUpAuth(data.email, data.password, data.role)
 
-    if (error) return { success: false, error: error.message }
-    if (!authData.user) return { success: false, error: 'No se pudo crear el usuario' }
+      if (error) {
+        if (error.message.toLowerCase().includes('database error saving new user')) {
+          return {
+            success: false,
+            error:
+              'Supabase no pudo crear el usuario porque falló el trigger de perfiles. Ejecutá la migración supabase/migrations/202611010001_auth_profile_bootstrap.sql en tu proyecto de Supabase.',
+          }
+        }
 
-    const userId = authData.user.id
+        return { success: false, error: error.message }
+      }
+      if (!authData.user) return { success: false, error: 'No se pudo crear el usuario' }
 
-    // Create profile record (the trigger should do this, but let's be safe)
-    await upsertBaseProfile(userId, data.email, data.role)
+      const userId = authData.user.id
 
-    if (data.role === 'user') {
-      const { error: profileError } = await insertUserProfile({
-        userId,
-        username: data.username || data.email.split('@')[0],
-        bio: data.bio || '',
-        followersInstagram: data.followersInstagram || 0,
-        followersTiktok: data.followersTiktok || 0,
-        category: data.category || 'Lifestyle',
-        location: data.location || 'Argentina',
-      })
-      if (profileError) return { success: false, error: profileError.message }
+      // Avoid blocking signup UI on profile bootstrap. If this fails, login/session
+      // repair path (ensureRoleProfile) will recreate missing role profiles.
+      if (authData.session?.user) {
+        void (async () => {
+          if (data.role === 'user') {
+            const { error: profileError } = await insertUserProfile({
+              userId,
+              username: data.username || data.email.split('@')[0],
+              bio: data.bio || '',
+              followersInstagram: data.followersInstagram || 0,
+              followersTiktok: data.followersTiktok || 0,
+              category: data.category || 'Lifestyle',
+              location: data.location || 'Argentina',
+            })
+
+            if (profileError) {
+              console.error('Background user profile bootstrap failed:', profileError.message)
+            }
+          }
+
+          if (data.role === 'brand') {
+            const { error: brandError } = await insertBrandProfile({
+              userId,
+              companyName: data.companyName || 'Mi Marca',
+              industry: data.industry || 'Otro',
+            })
+
+            if (brandError) {
+              console.error('Background brand profile bootstrap failed:', brandError.message)
+            }
+          }
+        })()
+      }
+
+      return { success: true }
+    } catch (err) {
+      return { success: false, error: err instanceof Error ? err.message : 'Error inesperado al registrarse' }
     }
-
-    if (data.role === 'brand') {
-      const { error: brandError } = await insertBrandProfile({
-        userId,
-        companyName: data.companyName || 'Mi Marca',
-        industry: data.industry || 'Otro',
-      })
-      if (brandError) return { success: false, error: brandError.message }
-    }
-
-    return { success: true }
   }
 
   const updateProfile = async (updates: Partial<UserProfile | BrandProfile>) => {

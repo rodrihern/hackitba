@@ -13,7 +13,6 @@ export default function ExplorePage() {
   const [search, setSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState<CampaignType | 'all'>('all')
   const [statusFilter, setStatusFilter] = useState<CampaignStatus | 'all'>('active')
-  const [appliedCampaigns, setAppliedCampaigns] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     async function fetchCampaigns() {
@@ -40,8 +39,8 @@ export default function ExplorePage() {
     return matchesSearch && matchesType && matchesStatus
   })
 
-  const handleApply = (campaignId: string) => {
-    setAppliedCampaigns(prev => new Set([...prev, campaignId]))
+  const handleApply = () => {
+    // Reserved for future local UI updates after applying.
   }
 
   return (
@@ -121,7 +120,7 @@ export default function ExplorePage() {
             <CampaignCard
               key={campaign.id}
               campaign={campaign}
-              onApply={() => handleApply(campaign.id)}
+              onApply={handleApply}
             />
           ))}
         </div>

@@ -17,11 +17,18 @@ export default function LoginPage() {
     e.preventDefault()
     setError('')
     setLoading(true)
-    const result = await login(email, password)
-    if (result.success && result.role) {
-      router.push(result.role === 'brand' ? '/brand/dashboard' : '/home')
-    } else {
+
+    try {
+      const result = await login(email, password)
+      if (result.success && result.role) {
+        router.push(result.role === 'brand' ? '/brand/dashboard' : '/home')
+        return
+      }
+
       setError(result.error || 'Error al iniciar sesión')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error inesperado al iniciar sesión')
+    } finally {
       setLoading(false)
     }
   }

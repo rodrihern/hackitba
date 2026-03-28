@@ -353,22 +353,33 @@ execute function add_points_on_score();
 -- Se ejecuta automáticamente al crear usuario en auth
 -- ============================================
 
-create or replace function handle_new_user()
-returns trigger as $$
+create or replace function public.handle_new_user()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
 begin
-  insert into profiles (id, email, role)
+  insert into public.profiles (id, email, role)
   values (
     new.id,
-    new.email,
-    coalesce((new.raw_user_meta_data->>'role')::user_role, 'user')
-  );
+    coalesce(new.email, ''),
+    case
+      when lower(coalesce(new.raw_user_meta_data->>'role', '')) = 'brand' then 'brand'::public.user_role
+      else 'user'::public.user_role
+    end
+  )
+  on conflict (id) do nothing;
+
   return new;
 end;
-$$ language plpgsql security definer;
+$$;
+
+drop trigger if exists on_auth_user_created on auth.users;
 
 create trigger on_auth_user_created
 after insert on auth.users
-for each row execute function handle_new_user();
+for each row execute function public.handle_new_user();
 
 -- ============================================
 -- ROW LEVEL SECURITY (RLS)

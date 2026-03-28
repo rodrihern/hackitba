@@ -15,7 +15,7 @@ export default function SignupPage() {
   const [username, setUsername] = useState('')
   const [bio, setBio] = useState('')
   const [category, setCategory] = useState('Lifestyle')
-  const [location, setLocation] = useState('Buenos Aires, AR')
+  const location = 'Buenos Aires, AR'
   const [followersInstagram, setFollowersInstagram] = useState('')
   const [followersTiktok, setFollowersTiktok] = useState('')
   // Brand fields
@@ -49,27 +49,41 @@ export default function SignupPage() {
       return
     }
 
-    const result = await signup({
-      email,
-      password,
-      role,
-      username,
-      bio,
-      category,
-      location,
-      followersInstagram: parseInt(followersInstagram) || 0,
-      followersTiktok: parseInt(followersTiktok) || 0,
-      companyName,
-      industry,
-    })
+    try {
+      const result = await Promise.race([
+        signup({
+          email,
+          password,
+          role,
+          username,
+          bio,
+          category,
+          location,
+          followersInstagram: parseInt(followersInstagram) || 0,
+          followersTiktok: parseInt(followersTiktok) || 0,
+          companyName,
+          industry,
+        }),
+        new Promise<{ success: boolean; error?: string }>((resolve) => {
+          setTimeout(() => {
+            resolve({
+              success: false,
+              error: 'El registro está tardando demasiado. Intentá de nuevo en unos segundos.',
+            })
+          }, 12000)
+        }),
+      ])
 
-    if (result.success) {
-      // Redirect to landing, which will redirect based on role after auth settles
-      setTimeout(() => {
-        router.push('/')
-      }, 500)
-    } else {
+      if (result.success) {
+        setLoading(false)
+        router.replace(role === 'brand' ? '/brand/dashboard' : '/home')
+        return
+      }
+
       setError(result.error || 'Error al registrarse')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error inesperado al registrarse')
+    } finally {
       setLoading(false)
     }
   }
