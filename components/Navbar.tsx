@@ -14,6 +14,11 @@ export default function Navbar({ role }: Props) {
   const { currentUser, logout } = useAuth()
   const [showDropdown, setShowDropdown] = useState(false)
 
+  const handleLogout = async () => {
+    setShowDropdown(false)
+    await logout('/login')
+  }
+
   const unreadCount = mockNotifications.filter(n => !n.read).length
 
   const profile = currentUser?.profile
@@ -82,7 +87,7 @@ export default function Navbar({ role }: Props) {
                 </Link>
               )}
               <button
-                onClick={() => { logout(); setShowDropdown(false) }}
+                onClick={handleLogout}
                 className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50"
               >
                 Cerrar sesión

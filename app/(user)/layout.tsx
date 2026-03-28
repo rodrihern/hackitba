@@ -22,6 +22,10 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
   const router = useRouter()
   const pathname = usePathname()
 
+  const handleLogout = async () => {
+    await logout('/login')
+  }
+
   const unreadCount = 0 // Will be fetched dynamically in notifications page
 
   useEffect(() => {
@@ -95,7 +99,7 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
             </div>
           </Link>
           <button
-            onClick={logout}
+            onClick={handleLogout}
             className="w-full text-left text-xs text-gray-400 hover:text-red-500 transition-colors flex items-center gap-1"
           >
             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">

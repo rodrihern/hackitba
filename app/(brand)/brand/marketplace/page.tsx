@@ -64,7 +64,6 @@ export default function MarketplacePage() {
   const [loadError, setLoadError] = useState('')
 
   const [search, setSearch] = useState('')
-  const [aiSearch, setAiSearch] = useState('')
   const [categoryFilter, setCategoryFilter] = useState<Set<string>>(new Set(['Todos']))
   const [levelFilter, setLevelFilter] = useState<Set<UserLevel | 'Todos'>>(new Set(['Todos']))
   const [platformFilter, setPlatformFilter] = useState<Set<string>>(new Set(['Todos']))
@@ -166,26 +165,6 @@ export default function MarketplacePage() {
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900 mb-1">Marketplace de Creadores</h1>
         <p className="text-gray-500">Encontrá a los creadores perfectos para tu marca</p>
-      </div>
-
-      {/* AI Search */}
-      <div className="bg-gradient-to-r from-indigo-600 to-violet-700 rounded-2xl p-6 mb-6 shadow-lg shadow-indigo-100">
-        <div className="text-white font-semibold mb-2 flex items-center gap-2">
-          <span>✨</span> Búsqueda inteligente
-        </div>
-        <p className="text-indigo-200 text-sm mb-4">Describí el creador ideal para tu campaña</p>
-        <div className="flex gap-3">
-          <input
-            type="text"
-            value={aiSearch}
-            onChange={(e) => setAiSearch(e.target.value)}
-            placeholder="Ej: Creador de fitness con más de 50K seguidores en Buenos Aires..."
-            className="flex-1 bg-white/10 text-white placeholder-indigo-300 border border-white/20 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-white/40 backdrop-blur-sm"
-          />
-          <button className="bg-white text-indigo-600 font-semibold px-5 py-3 rounded-xl hover:bg-indigo-50 transition-colors text-sm">
-            Buscar
-          </button>
-        </div>
       </div>
 
       <div className="flex gap-8">

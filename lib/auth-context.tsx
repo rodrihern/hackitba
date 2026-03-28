@@ -33,12 +33,43 @@ interface AuthContextType {
   isLoading: boolean
   session: Session | null
   login: (email: string, password: string) => Promise<{ success: boolean; role?: UserRole; error?: string }>
-  logout: () => Promise<void>
+  logout: (redirectTo?: string) => Promise<void>
   signup: (data: SignupData) => Promise<{ success: boolean; error?: string }>
   updateProfile: (updates: Partial<UserProfile | BrandProfile>) => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | null>(null)
+
+function clearClientAuthArtifacts() {
+  if (typeof window === 'undefined') return
+
+  try {
+    localStorage.removeItem('signup_role')
+    sessionStorage.removeItem('signup_role')
+
+    // Best-effort cleanup for Supabase persisted auth artifacts.
+    Object.keys(localStorage).forEach((key) => {
+      if (key.startsWith('sb-')) {
+        localStorage.removeItem(key)
+      }
+    })
+
+    Object.keys(sessionStorage).forEach((key) => {
+      if (key.startsWith('sb-')) {
+        sessionStorage.removeItem(key)
+      }
+    })
+
+    // Clear non-httpOnly cookies that may hold client-side auth metadata.
+    document.cookie.split(';').forEach((cookie) => {
+      const name = cookie.split('=')[0]?.trim()
+      if (!name) return
+      document.cookie = `${name}=; Max-Age=0; path=/; SameSite=Lax`
+    })
+  } catch (err) {
+    console.error('Error clearing local auth artifacts:', err)
+  }
+}
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null)
@@ -147,19 +178,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { success: true, role: userData.role }
   }
 
-  const logout = async () => {
+  const logout = async (redirectTo = '/login') => {
     try {
       await signOutAuth()
-
-      // Keep local state aligned with the real Supabase session state.
-      setCurrentUser(null)
-      setSession(null)
-
-      if (typeof window !== 'undefined' && window.location.pathname !== '/') {
-        window.location.assign('/')
-      }
     } catch (err) {
       console.error('Error during sign out:', err)
+    } finally {
+      // Always clear in-memory and client-side state, even if remote sign-out fails.
+      setCurrentUser(null)
+      setSession(null)
+      clearClientAuthArtifacts()
+
+      if (typeof window !== 'undefined' && window.location.pathname !== redirectTo) {
+        window.location.assign(redirectTo)
+      }
     }
   }
 
