@@ -16,6 +16,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "CollabSpace - Plataforma de Colaboraciones",
   description: "Conecta marcas con creadores de contenido",
+  icons: {
+    icon: "/icon.png",
+  },
 };
 
 export default function RootLayout({

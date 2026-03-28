@@ -15,7 +15,6 @@ const navItems = [
   { href: '/campaigns', label: 'Mis Campañas', icon: '📋' },
   { href: '/points', label: 'Mis Puntos', icon: '⭐' },
   { href: '/store', label: 'Tienda', icon: '🛍️' },
-  { href: '/notifications', label: 'Notificaciones', icon: '🔔' },
 ]
 
 export default function UserLayout({ children }: { children: React.ReactNode }) {
@@ -25,8 +24,6 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
   const handleLogout = async () => {
     await logout('/login')
   }
-
-  const unreadCount = 0 // Will be fetched dynamically in notifications page
 
   useEffect(() => {
     if (isLoading || typeof window === 'undefined') return
@@ -63,9 +60,8 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
         {/* Logo */}
         <div className="px-6 py-5 border-b border-gray-50">
           <Link href="/home" className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">CS</span>
-            </div>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/icon.png" alt="CollabSpace" className="w-8 h-8" />
             <span className="font-bold text-gray-900">CollabSpace</span>
           </Link>
         </div>
@@ -86,11 +82,6 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
               >
                 <span className="text-base">{item.icon}</span>
                 <span>{item.label}</span>
-                {item.label === 'Notificaciones' && unreadCount > 0 && (
-                  <span className="ml-auto bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full">
-                    {unreadCount}
-                  </span>
-                )}
               </Link>
             )
           })}

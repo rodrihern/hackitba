@@ -15,7 +15,6 @@ export default function ExplorePage() {
   const [isLoading, setIsLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState<CampaignType | 'all'>('all')
-  const [statusFilter, setStatusFilter] = useState<CampaignStatus | 'all'>('active')
   const [selectedExchange, setSelectedExchange] = useState<Campaign | null>(null)
   const profile = currentUser?.profile as UserProfile
 
@@ -40,8 +39,7 @@ export default function ExplorePage() {
       c.brandName.toLowerCase().includes(search.toLowerCase()) ||
       c.description.toLowerCase().includes(search.toLowerCase())
     const matchesType = typeFilter === 'all' || c.type === typeFilter
-    const matchesStatus = statusFilter === 'all' || c.status === statusFilter
-    return matchesSearch && matchesType && matchesStatus
+    return matchesSearch && matchesType
   })
 
   const handleApplied = (campaignId: string) => {
@@ -92,23 +90,6 @@ export default function ExplorePage() {
               onClick={() => setTypeFilter(val)}
               className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
                 typeFilter === val
-                  ? 'bg-white text-indigo-600 shadow-sm'
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-
-        {/* Status filter */}
-        <div className="flex items-center gap-1 bg-gray-100 rounded-xl p-1">
-          {([['all', 'Todos'], ['active', 'Activas'], ['draft', 'Borradores']] as const).map(([val, label]) => (
-            <button
-              key={val}
-              onClick={() => setStatusFilter(val)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                statusFilter === val
                   ? 'bg-white text-indigo-600 shadow-sm'
                   : 'text-gray-500 hover:text-gray-700'
               }`}
