@@ -18,7 +18,7 @@ const navItems = [
 ]
 
 export default function UserLayout({ children }: { children: React.ReactNode }) {
-  const { currentUser, isLoading, logout } = useAuth()
+  const { currentUser, isLoading, session, logout } = useAuth()
   const pathname = usePathname()
 
   const handleLogout = async () => {
@@ -30,19 +30,23 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
   useEffect(() => {
     if (isLoading || typeof window === 'undefined') return
 
-    if (!currentUser || currentUser.role !== 'user') {
+    if (!session) {
       if (window.location.pathname !== '/') {
         window.location.replace('/')
       }
     }
-  }, [currentUser, isLoading])
+  }, [session, isLoading])
 
-  if (isLoading || !currentUser || currentUser.role !== 'user') {
+  if (isLoading || (session && (!currentUser || currentUser.role !== 'user'))) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
       </div>
     )
+  }
+
+  if (!currentUser || currentUser.role !== 'user') {
+    return null
   }
 
   const profile = currentUser.profile as UserProfile

@@ -14,7 +14,7 @@ const navItems = [
 ]
 
 export default function BrandLayout({ children }: { children: React.ReactNode }) {
-  const { currentUser, isLoading, logout } = useAuth()
+  const { currentUser, isLoading, session, logout } = useAuth()
   const pathname = usePathname()
   const [failedLogoSrc, setFailedLogoSrc] = useState<string | null>(null)
 
@@ -25,21 +25,25 @@ export default function BrandLayout({ children }: { children: React.ReactNode })
   useEffect(() => {
     if (isLoading || typeof window === 'undefined') return
 
-    if (!currentUser || currentUser.role !== 'brand') {
+    if (!session) {
       if (window.location.pathname !== '/') {
         window.location.replace('/')
       }
     }
-  }, [currentUser, isLoading])
+  }, [session, isLoading])
 
   const rawLogo = (currentUser?.profile as BrandProfile | undefined)?.logo?.trim() ?? ''
 
-  if (isLoading || !currentUser || currentUser.role !== 'brand') {
+  if (isLoading || (session && (!currentUser || currentUser.role !== 'brand'))) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
       </div>
     )
+  }
+
+  if (!currentUser || currentUser.role !== 'brand') {
+    return null
   }
 
   const profile = currentUser.profile as BrandProfile

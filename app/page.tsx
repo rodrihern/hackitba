@@ -6,7 +6,7 @@ import { ArrowLeftRight, Trophy, Star } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 
 export default function Home() {
-  const { currentUser, isLoading } = useAuth()
+  const { currentUser, isLoading, session } = useAuth()
 
   useEffect(() => {
     if (isLoading || !currentUser || typeof window === 'undefined') return
@@ -19,6 +19,14 @@ export default function Home() {
   }, [currentUser, isLoading])
 
   if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
+  }
+
+  if (session && !currentUser) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
         <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
