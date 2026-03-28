@@ -31,12 +31,30 @@ export async function signOutAuth() {
   if (error) throw new Error(error.message)
 }
 
-export async function signUpAuth(email: string, password: string, role: UserRole) {
+export async function signUpAuth(input: {
+  email: string
+  password: string
+  role: UserRole
+  username?: string
+  companyName?: string
+  industry?: string
+}) {
+  const metadata: Record<string, unknown> = { role: input.role }
+
+  if (input.role === 'user' && input.username?.trim()) {
+    metadata.username = input.username.trim()
+  }
+
+  if (input.role === 'brand') {
+    if (input.companyName?.trim()) metadata.companyName = input.companyName.trim()
+    if (input.industry?.trim()) metadata.industry = input.industry.trim()
+  }
+
   return supabase.auth.signUp({
-    email,
-    password,
+    email: input.email,
+    password: input.password,
     options: {
-      data: { role },
+      data: metadata,
     },
   })
 }
@@ -191,6 +209,7 @@ export async function ensureRoleProfile(input: {
   id: string
   email?: string | null
   role?: unknown
+  username?: unknown
   companyName?: unknown
   industry?: unknown
 }) {
@@ -200,7 +219,10 @@ export async function ensureRoleProfile(input: {
   if (role === 'user') {
     const { error: userError } = await insertUserProfile({
       userId: input.id,
-      username: defaultUsername(email, input.id),
+      username:
+        typeof input.username === 'string' && input.username.trim()
+          ? input.username.trim()
+          : defaultUsername(email, input.id),
       bio: '',
       followersInstagram: 0,
       followersTiktok: 0,

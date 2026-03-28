@@ -6,6 +6,16 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth-context'
 import type { UserRole } from '@/lib/types'
 
+function sanitizeUsername(value: string): string {
+  // Keep usernames URL/mention friendly: lowercase + alnum + dot + underscore.
+  return value
+    .trim()
+    .replace(/^@+/, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9._]/g, '')
+    .slice(0, 30)
+}
+
 export default function SignupPage() {
   const [role, setRole] = useState<UserRole>('user')
   const [email, setEmail] = useState('')
@@ -13,11 +23,6 @@ export default function SignupPage() {
   const [confirmPassword, setConfirmPassword] = useState('')
   // User fields
   const [username, setUsername] = useState('')
-  const [bio, setBio] = useState('')
-  const [category, setCategory] = useState('Lifestyle')
-  const location = 'Buenos Aires, AR'
-  const [followersInstagram, setFollowersInstagram] = useState('')
-  const [followersTiktok, setFollowersTiktok] = useState('')
   // Brand fields
   const [companyName, setCompanyName] = useState('')
   const [industry, setIndustry] = useState('Moda & Lifestyle')
@@ -49,18 +54,26 @@ export default function SignupPage() {
       return
     }
 
+    if (role === 'user' && !username.trim()) {
+      setError('El username es obligatorio')
+      setLoading(false)
+      return
+    }
+
+    const normalizedUsername = sanitizeUsername(username)
+    if (role === 'user' && (normalizedUsername.length < 3 || normalizedUsername.length > 30)) {
+      setError('El username debe tener entre 3 y 30 caracteres válidos')
+      setLoading(false)
+      return
+    }
+
     try {
       const result = await Promise.race([
         signup({
           email,
           password,
           role,
-          username,
-          bio,
-          category,
-          location,
-          followersInstagram: parseInt(followersInstagram) || 0,
-          followersTiktok: parseInt(followersTiktok) || 0,
+          username: normalizedUsername,
           companyName,
           industry,
         }),
@@ -88,7 +101,6 @@ export default function SignupPage() {
     }
   }
 
-  const categories = ['Fitness & Salud', 'Moda & Belleza', 'Gastronomía', 'Tecnología', 'Viajes', 'Música', 'Gaming', 'Lifestyle']
   const industries = ['Moda & Lifestyle', 'Deportes', 'Tecnología', 'Gastronomía', 'Belleza', 'Música & Entretenimiento', 'Otro']
 
   return (
@@ -170,54 +182,15 @@ export default function SignupPage() {
                   <input
                     type="text"
                     value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    placeholder="@tuusername"
+                    onChange={(e) => setUsername(sanitizeUsername(e.target.value))}
+                    placeholder="Nombre de usuario"
+                    minLength={3}
+                    maxLength={30}
+                    pattern="^[a-z0-9._]{3,30}$"
+                    required
                     className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
                   />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Bio</label>
-                  <textarea
-                    value={bio}
-                    onChange={(e) => setBio(e.target.value)}
-                    placeholder="Contanos sobre vos..."
-                    rows={2}
-                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition resize-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Categoría</label>
-                  <select
-                    value={category}
-                    onChange={(e) => setCategory(e.target.value)}
-                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
-                  >
-                    {categories.map(c => <option key={c}>{c}</option>)}
-                  </select>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Seguidores IG</label>
-                    <input
-                      type="number"
-                      value={followersInstagram}
-                      onChange={(e) => setFollowersInstagram(e.target.value)}
-                      placeholder="10000"
-                      min={0}
-                      className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Seguidores TikTok</label>
-                    <input
-                      type="number"
-                      value={followersTiktok}
-                      onChange={(e) => setFollowersTiktok(e.target.value)}
-                      placeholder="10000"
-                      min={0}
-                      className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
-                    />
-                  </div>
+                  <p className="mt-1 text-xs text-gray-500">Solo letras minúsculas, números, punto y guion bajo (3-30).</p>
                 </div>
               </>
             )}

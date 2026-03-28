@@ -24,11 +24,6 @@ interface SignupData {
   password: string
   role: UserRole
   username?: string
-  bio?: string
-  followersInstagram?: number
-  followersTiktok?: number
-  category?: string
-  location?: string
   companyName?: string
   industry?: string
 }
@@ -64,6 +59,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               id: session.user.id,
               email: session.user.email,
               role: roleHint,
+              username: session.user.user_metadata?.username,
               companyName: session.user.user_metadata?.companyName,
               industry: session.user.user_metadata?.industry,
             })
@@ -93,6 +89,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               id: session.user.id,
               email: session.user.email,
               role: roleHint,
+              username: session.user.user_metadata?.username,
               companyName: session.user.user_metadata?.companyName,
               industry: session.user.user_metadata?.industry,
             })
@@ -127,6 +124,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           id: data.user.id,
           email: data.user.email,
           role: roleHint,
+          username: data.user.user_metadata?.username,
           companyName: data.user.user_metadata?.companyName,
           industry: data.user.user_metadata?.industry,
         })
@@ -167,7 +165,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signup = async (data: SignupData): Promise<{ success: boolean; error?: string }> => {
     try {
-      const { data: authData, error } = await signUpAuth(data.email, data.password, data.role)
+      const { data: authData, error } = await signUpAuth({
+        email: data.email,
+        password: data.password,
+        role: data.role,
+        username: data.username,
+        companyName: data.companyName,
+        industry: data.industry,
+      })
 
       if (error) {
         if (error.message.toLowerCase().includes('database error saving new user')) {
@@ -192,11 +197,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const { error: profileError } = await insertUserProfile({
               userId,
               username: data.username || data.email.split('@')[0],
-              bio: data.bio || '',
-              followersInstagram: data.followersInstagram || 0,
-              followersTiktok: data.followersTiktok || 0,
-              category: data.category || 'Lifestyle',
-              location: data.location || 'Argentina',
+              bio: '',
+              followersInstagram: 0,
+              followersTiktok: 0,
+              category: 'Lifestyle',
+              location: 'Argentina',
             })
 
             if (profileError) {
