@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth-context'
-import { supabase } from '@/lib/supabase'
+import { createCampaign } from '@/lib/services/campaign-service'
 import type { CampaignType, ContentType, BrandProfile } from '@/lib/types'
 
 type Step = 1 | 2 | 3
@@ -47,6 +47,7 @@ export default function CreateCampaignPage() {
 
   const [publishing, setPublishing] = useState(false)
   const [publishError, setPublishError] = useState('')
+  const [publishAction, setPublishAction] = useState<'draft' | 'active' | null>(null)
 
   const addDay = () => {
     setDays(prev => [...prev, { title: '', description: '', contentType: 'image', instructions: '' }])
@@ -60,147 +61,45 @@ export default function CreateCampaignPage() {
     if (days.length > 1) setDays(prev => prev.filter((_, i) => i !== idx))
   }
 
-  const handleSaveDraft = async () => {
-    if (!brand?.id) return
-    setPublishing(true)
-    setPublishError('')
-
-    try {
-      const { data: campaign, error: campaignError } = await supabase
-        .from('campaigns')
-        .insert({
-          brand_id: brand.id,
-          type: campaignType,
-          title,
-          description,
-          status: 'draft',
-        })
-        .select()
-        .single()
-
-      if (campaignError) throw new Error(campaignError.message)
-
-      if (campaignType === 'exchange') {
-        const { error: exchangeError } = await supabase.from('exchanges').insert({
-          campaign_id: campaign.id,
-          requirements: requirement ? { main: requirement } : {},
-          reward_description: productDescription || `Recompensa: ${rewardType}`,
-          reward_type: rewardType,
-          money_amount: moneyAmount ? parseFloat(moneyAmount) : null,
-          product_description: productDescription,
-          slots: parseInt(slots),
-          deadline: deadline || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        })
-        if (exchangeError) throw new Error(exchangeError.message)
-      }
-
-      if (campaignType === 'challenge') {
-        const { data: challenge, error: challengeError } = await supabase
-          .from('challenges')
-          .insert({
-            campaign_id: campaign.id,
-            is_multi_day: isMultiDay,
-            total_days: days.length,
-            has_leaderboard: hasLeaderboard,
-            max_winners: parseInt(maxWinners),
-          })
-          .select()
-          .single()
-
-        if (challengeError) throw new Error(challengeError.message)
-
-        if (isMultiDay && days.length > 0) {
-          const { error: daysError } = await supabase.from('challenge_days').insert(
-            days.map((day, i) => ({
-              challenge_id: challenge.id,
-              day_number: i + 1,
-              title: day.title,
-              description: day.description,
-              content_type: day.contentType,
-              instructions: day.instructions,
-            }))
-          )
-          if (daysError) throw new Error(daysError.message)
-        }
-      }
-
-      router.push('/brand/campaigns')
-    } catch (err) {
-      setPublishError(err instanceof Error ? err.message : 'Error al guardar')
-    } finally {
-      setPublishing(false)
+  const handleSubmit = async (status: 'draft' | 'active') => {
+    if (!brand?.id || !campaignType) {
+      setPublishError('No se pudo detectar la marca o el tipo de campaña')
+      return
     }
-  }
 
-  const handlePublish = async () => {
-    if (!brand?.id) return
     setPublishing(true)
+    setPublishAction(status)
     setPublishError('')
 
     try {
-      const { data: campaign, error: campaignError } = await supabase
-        .from('campaigns')
-        .insert({
-          brand_id: brand.id,
-          type: campaignType,
-          title,
-          description,
-          status: 'active',
-        })
-        .select()
-        .single()
-
-      if (campaignError) throw new Error(campaignError.message)
-
-      if (campaignType === 'exchange') {
-        const { error: exchangeError } = await supabase.from('exchanges').insert({
-          campaign_id: campaign.id,
-          requirements: requirement ? { main: requirement } : {},
-          reward_description: productDescription || `Recompensa: ${rewardType}`,
-          reward_type: rewardType,
-          money_amount: moneyAmount ? parseFloat(moneyAmount) : null,
-          product_description: productDescription,
-          slots: parseInt(slots),
-          deadline: deadline || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        })
-        if (exchangeError) throw new Error(exchangeError.message)
-      }
-
-      if (campaignType === 'challenge') {
-        const { data: challenge, error: challengeError } = await supabase
-          .from('challenges')
-          .insert({
-            campaign_id: campaign.id,
-            is_multi_day: isMultiDay,
-            total_days: days.length,
-            has_leaderboard: hasLeaderboard,
-            max_winners: parseInt(maxWinners),
-          })
-          .select()
-          .single()
-
-        if (challengeError) throw new Error(challengeError.message)
-
-        if (isMultiDay && days.length > 0) {
-          const { error: daysError } = await supabase.from('challenge_days').insert(
-            days.map((day, i) => ({
-              challenge_id: challenge.id,
-              day_number: i + 1,
-              title: day.title,
-              description: day.description,
-              content_type: day.contentType,
-              instructions: day.instructions,
-            }))
-          )
-          if (daysError) throw new Error(daysError.message)
-        }
-      }
+      await createCampaign({
+        brandId: brand.id,
+        type: campaignType,
+        title,
+        description,
+        status,
+        exchange: {
+          requirement,
+          rewardType,
+          moneyAmount,
+          productDescription,
+          slots,
+          deadline,
+        },
+        challenge: {
+          isMultiDay,
+          hasLeaderboard,
+          maxWinners,
+          days,
+        },
+      })
 
       router.push('/brand/campaigns')
     } catch (err) {
-      setPublishError(err instanceof Error ? err.message : 'Error al publicar')
+      setPublishError(err instanceof Error ? err.message : status === 'draft' ? 'Error al guardar' : 'Error al publicar')
     } finally {
       setPublishing(false)
+      setPublishAction(null)
     }
   }
 
@@ -593,17 +492,24 @@ export default function CreateCampaignPage() {
             <div className="flex gap-3">
               <button
                 className="border border-gray-200 text-gray-700 font-medium px-5 py-2.5 rounded-xl hover:bg-gray-50 transition-colors text-sm disabled:opacity-50"
-                onClick={handleSaveDraft}
+                onClick={() => handleSubmit('draft')}
                 disabled={publishing}
               >
-                Guardar borrador
+                {publishing && publishAction === 'draft' ? (
+                  <span className="inline-flex items-center gap-2">
+                    <span className="w-4 h-4 border-2 border-gray-600 border-t-transparent rounded-full animate-spin" />
+                    Guardando...
+                  </span>
+                ) : (
+                  'Guardar borrador'
+                )}
               </button>
               <button
-                onClick={handlePublish}
+                onClick={() => handleSubmit('active')}
                 disabled={publishing}
                 className="bg-indigo-600 text-white font-semibold px-6 py-2.5 rounded-xl hover:bg-indigo-700 transition-colors disabled:opacity-60 text-sm"
               >
-                {publishing ? (
+                {publishing && publishAction === 'active' ? (
                   <span className="inline-flex items-center gap-2">
                     <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                     Publicando...
