@@ -58,17 +58,34 @@ export default function BrandCampaignsPage() {
 
   return (
     <div className="p-8 max-w-5xl mx-auto">
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 mb-1">Mis Campañas</h1>
           <p className="text-gray-500">Gestioná todas tus campañas en un solo lugar</p>
         </div>
-        <Link
-          href="/brand/campaigns/create"
-          className="bg-indigo-600 text-white font-medium px-4 py-2 rounded-xl hover:bg-indigo-700 transition-colors text-sm flex items-center gap-2"
-        >
-          <span>+</span> Nueva campaña
-        </Link>
+      </div>
+
+      <div className="mb-6 rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="font-bold text-gray-900">Crear campañas</h2>
+            <p className="text-sm text-gray-500">Elegí el formato y entrá directo al formulario correcto.</p>
+          </div>
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <Link
+              href="/brand/campaigns/create?type=exchange"
+              className="bg-indigo-600 text-white font-medium px-4 py-2 rounded-xl hover:bg-indigo-700 transition-colors text-sm text-center"
+            >
+              Crear Canje
+            </Link>
+            <Link
+              href="/brand/campaigns/create?type=challenge"
+              className="bg-orange-500 text-white font-medium px-4 py-2 rounded-xl hover:bg-orange-600 transition-colors text-sm text-center"
+            >
+              Crear Reto
+            </Link>
+          </div>
+        </div>
       </div>
 
       {/* Tabs */}
@@ -103,9 +120,14 @@ export default function BrandCampaignsPage() {
         <div className="text-center py-20 bg-white rounded-2xl border border-gray-100">
           <div className="text-5xl mb-4">📋</div>
           <p className="font-medium text-gray-600 mb-1">No hay campañas en esta sección</p>
-          <Link href="/brand/campaigns/create" className="text-sm text-indigo-600 hover:underline">
-            Crear una nueva campaña →
-          </Link>
+          <div className="mt-4 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+            <Link href="/brand/campaigns/create?type=exchange" className="text-sm text-indigo-600 hover:underline">
+              Crear un canje →
+            </Link>
+            <Link href="/brand/campaigns/create?type=challenge" className="text-sm text-orange-600 hover:underline">
+              Crear un reto →
+            </Link>
+          </div>
         </div>
       ) : (
         <div className="space-y-3">

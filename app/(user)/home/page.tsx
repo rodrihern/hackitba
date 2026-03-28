@@ -99,7 +99,7 @@ export default function HomePage() {
           <div className="mt-3">
             <div className="flex justify-between text-xs text-gray-400 mb-1">
               <span>{profile?.level}</span>
-              <span>{threshold.next !== profile?.level ? threshold.next : '✨ Max'}</span>
+              <span>{threshold.next !== profile?.level ? threshold.next : 'Max'}</span>
             </div>
             <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
               <div

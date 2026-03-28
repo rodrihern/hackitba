@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { Trophy, Check } from 'lucide-react'
 import type { Campaign } from '@/lib/types'
 
 function formatDate(dateStr: string) {
@@ -124,8 +125,8 @@ export default function CampaignCard({ campaign, href, onApply, showBrand = true
           <div className="space-y-2">
             {campaign.challenge.hasLeaderboard && (
               <div className="flex items-center gap-2">
-                <span className="text-xs bg-yellow-50 text-yellow-700 font-medium px-2 py-0.5 rounded-full">
-                  🏆 Leaderboard
+                <span className="text-xs bg-yellow-50 text-yellow-700 font-medium px-2 py-0.5 rounded-full inline-flex items-center gap-1">
+                  <Trophy size={11} /> Leaderboard
                 </span>
               </div>
             )}
@@ -147,7 +148,7 @@ export default function CampaignCard({ campaign, href, onApply, showBrand = true
           {isExchange && onApply && isAccepted ? (
             <div className="flex-1 rounded-xl border border-green-200 bg-green-50 px-4 py-2.5 text-sm font-semibold text-green-700">
               <div className="flex items-center justify-center gap-2">
-                <span aria-hidden="true">✓</span>
+                <Check size={14} />
                 <span>Colaboración aceptada</span>
               </div>
             </div>

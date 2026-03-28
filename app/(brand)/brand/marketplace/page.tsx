@@ -95,7 +95,7 @@ export default function MarketplacePage() {
       console.error('Error fetching marketplace data:', err)
       setUsers([])
       setBrandExchanges([])
-      setLoadError(err instanceof Error ? err.message : 'No se pudo cargar el marketplace')
+      setLoadError(err instanceof Error ? err.message : 'No se pudieron cargar los influencers')
     } finally {
       setIsLoading(false)
     }
@@ -163,7 +163,7 @@ export default function MarketplacePage() {
   return (
     <div className="p-8 max-w-7xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 mb-1">Marketplace de Creadores</h1>
+        <h1 className="text-2xl font-bold text-gray-900 mb-1">Influencers</h1>
         <p className="text-gray-500">Encontrá a los creadores perfectos para tu marca</p>
       </div>
 
@@ -247,7 +247,7 @@ export default function MarketplacePage() {
             </div>
           ) : loadError ? (
             <div className="bg-red-50 border border-red-100 rounded-2xl p-6 text-center">
-              <p className="text-sm text-red-600 mb-4">No se pudo cargar el marketplace: {loadError}</p>
+              <p className="text-sm text-red-600 mb-4">No se pudieron cargar los influencers: {loadError}</p>
               <button
                 onClick={() => {
                   setIsLoading(true)

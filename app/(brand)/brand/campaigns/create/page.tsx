@@ -2,8 +2,8 @@
 
 export const dynamic = 'force-dynamic'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/lib/auth-context'
 import { createCampaign } from '@/lib/services/campaign-service'
 import type { CampaignType, ContentType, BrandProfile, ExchangeFormFieldType } from '@/lib/types'
@@ -44,13 +44,20 @@ function isContentType(value: ContentType | ''): value is ContentType {
   return value === 'image' || value === 'video' || value === 'text' || value === 'link'
 }
 
+function getRequestedCampaignType(type: string | null): CampaignType | null {
+  return type === 'exchange' || type === 'challenge' ? type : null
+}
+
 export default function CreateCampaignPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { currentUser } = useAuth()
   const brand = currentUser?.profile as BrandProfile
+  const requestedCampaignType = getRequestedCampaignType(searchParams.get('type'))
+  const isDirectCreateFlow = Boolean(requestedCampaignType)
 
-  const [step, setStep] = useState<Step>(1)
-  const [campaignType, setCampaignType] = useState<CampaignType | null>(null)
+  const [step, setStep] = useState<Step>(requestedCampaignType ? 2 : 1)
+  const [campaignType, setCampaignType] = useState<CampaignType | null>(requestedCampaignType)
 
   // Common fields
   const [title, setTitle] = useState('')
@@ -82,6 +89,13 @@ export default function CreateCampaignPage() {
   const [publishing, setPublishing] = useState(false)
   const [publishError, setPublishError] = useState('')
   const [publishAction, setPublishAction] = useState<'draft' | 'active' | null>(null)
+
+  useEffect(() => {
+    if (!requestedCampaignType) return
+
+    setCampaignType(requestedCampaignType)
+    setStep(currentStep => (currentStep === 1 ? 2 : currentStep))
+  }, [requestedCampaignType])
 
   const addDay = () => {
     setDays(prev => [...prev, { title: '', description: '', contentType: '', instructions: '' }])
@@ -190,21 +204,32 @@ export default function CreateCampaignPage() {
     }
   }
 
-  const steps = ['Tipo', 'Configurar', 'Publicar']
+  const steps = isDirectCreateFlow ? ['Configurar', 'Publicar'] : ['Tipo', 'Configurar', 'Publicar']
+  const visibleStep = isDirectCreateFlow ? (step === 3 ? 2 : 1) : step
+  const pageTitle = campaignType === 'exchange'
+    ? 'Crear Canje'
+    : campaignType === 'challenge'
+    ? 'Crear Reto'
+    : 'Crear Campaña'
+  const pageDescription = campaignType === 'exchange'
+    ? 'Configurá tu canje sin pasos extra.'
+    : campaignType === 'challenge'
+    ? 'Configurá tu reto sin pasos extra.'
+    : 'Conectá con los creadores perfectos para tu marca'
 
   return (
     <div className="p-8 max-w-3xl mx-auto">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900 mb-1">Crear Campaña</h1>
-        <p className="text-gray-500">Conectá con los creadores perfectos para tu marca</p>
+        <h1 className="text-2xl font-bold text-gray-900 mb-1">{pageTitle}</h1>
+        <p className="text-gray-500">{pageDescription}</p>
       </div>
 
       {/* Progress indicator */}
       <div className="flex items-center gap-2 mb-8">
         {steps.map((label, i) => {
-          const s = (i + 1) as Step
-          const isComplete = step > s
-          const isCurrent = step === s
+          const displayStep = i + 1
+          const isComplete = visibleStep > displayStep
+          const isCurrent = visibleStep === displayStep
           return (
             <div key={label} className="flex items-center gap-2">
               <div className={`flex items-center gap-2 ${isCurrent ? 'text-indigo-600' : isComplete ? 'text-green-600' : 'text-gray-400'}`}>
@@ -213,12 +238,12 @@ export default function CreateCampaignPage() {
                   isComplete ? 'border-green-500 bg-green-50 text-green-600' :
                   'border-gray-200 bg-white text-gray-400'
                 }`}>
-                  {isComplete ? '✓' : s}
+                  {isComplete ? '✓' : displayStep}
                 </div>
                 <span className="text-sm font-medium">{label}</span>
               </div>
-              {i < steps.length - 1 && (
-                <div className={`flex-1 h-px w-12 ${step > s ? 'bg-green-400' : 'bg-gray-200'}`} />
+              {displayStep < steps.length && (
+                <div className={`flex-1 h-px w-12 ${visibleStep > displayStep ? 'bg-green-400' : 'bg-gray-200'}`} />
               )}
             </div>
           )
@@ -226,7 +251,7 @@ export default function CreateCampaignPage() {
       </div>
 
       {/* Step 1: Choose type */}
-      {step === 1 && (
+      {!isDirectCreateFlow && step === 1 && (
         <div className="space-y-4">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">¿Qué tipo de campaña querés crear?</h2>
           <div className="grid grid-cols-2 gap-4">
@@ -601,10 +626,17 @@ export default function CreateCampaignPage() {
 
           <div className="flex justify-between pt-2">
             <button
-              onClick={() => setStep(1)}
+              onClick={() => {
+                if (isDirectCreateFlow) {
+                  router.push('/brand/campaigns')
+                  return
+                }
+
+                setStep(1)
+              }}
               className="border border-gray-200 text-gray-700 font-medium px-5 py-2.5 rounded-xl hover:bg-gray-50 transition-colors text-sm"
             >
-              ← Atrás
+              {isDirectCreateFlow ? '← Mis Campañas' : '← Atrás'}
             </button>
             <button
               onClick={() => canContinueToPublish && setStep(3)}

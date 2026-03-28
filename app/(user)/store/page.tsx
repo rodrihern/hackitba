@@ -3,6 +3,7 @@
 export const dynamic = 'force-dynamic'
 
 import { useState, useEffect } from 'react'
+import { Gift, CheckCircle } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 import RewardCard from '@/components/RewardCard'
 import type { Reward, UserProfile } from '@/lib/types'
@@ -165,7 +166,7 @@ export default function StorePage() {
       {/* Rewards grid */}
       {filteredRewards.length === 0 ? (
         <div className="text-center py-20 text-gray-400 bg-white rounded-2xl border border-gray-100">
-          <div className="text-5xl mb-4">🎁</div>
+          <div className="flex justify-center mb-4"><Gift size={48} className="text-gray-300" /></div>
           <p className="font-medium text-gray-600">No hay recompensas disponibles</p>
         </div>
       ) : (
@@ -177,7 +178,7 @@ export default function StorePage() {
                 {redeemed.has(reward.id) && (
                   <div className="absolute inset-0 bg-green-500/10 border-2 border-green-400 rounded-2xl z-10 flex items-center justify-center">
                     <div className="bg-green-500 text-white rounded-full px-4 py-2 text-sm font-bold shadow-lg">
-                      ✅ Canjeado
+                      <CheckCircle size={14} className="inline mr-1" />Canjeado
                     </div>
                   </div>
                 )}
