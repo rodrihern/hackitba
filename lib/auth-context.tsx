@@ -75,35 +75,48 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    // Get initial session
-    getAuthSession().then(async ({ data: { session } }) => {
-      setSession(session)
-      if (session?.user) {
-        const roleHint = session.user.user_metadata?.role
-        let userData = await fetchAuthUserDataWithRoleHint(session.user.id, roleHint)
-
-        if (!userData) {
-          try {
-            const repaired = await ensureRoleProfile({
-              id: session.user.id,
-              email: session.user.email,
-              role: roleHint,
-              username: session.user.user_metadata?.username,
-              companyName: session.user.user_metadata?.companyName,
-              industry: session.user.user_metadata?.industry,
-            })
-            if (repaired) {
-              userData = await fetchAuthUserDataWithRoleHint(session.user.id, roleHint)
-            }
-          } catch (err) {
-            console.error('Error repairing missing profile on session restore:', err)
-          }
-        }
-
-        setCurrentUser(userData)
-      }
+    // Safety timeout to prevent infinite loading
+    const timeoutId = setTimeout(() => {
+      console.warn('Auth session loading timed out after 10 seconds')
       setIsLoading(false)
-    })
+    }, 10000)
+
+    // Get initial session
+    getAuthSession()
+      .then(async ({ data: { session } }) => {
+        setSession(session)
+        if (session?.user) {
+          const roleHint = session.user.user_metadata?.role
+          let userData = await fetchAuthUserDataWithRoleHint(session.user.id, roleHint)
+
+          if (!userData) {
+            try {
+              const repaired = await ensureRoleProfile({
+                id: session.user.id,
+                email: session.user.email,
+                role: roleHint,
+                username: session.user.user_metadata?.username,
+                companyName: session.user.user_metadata?.companyName,
+                industry: session.user.user_metadata?.industry,
+              })
+              if (repaired) {
+                userData = await fetchAuthUserDataWithRoleHint(session.user.id, roleHint)
+              }
+            } catch (err) {
+              console.error('Error repairing missing profile on session restore:', err)
+            }
+          }
+
+          setCurrentUser(userData)
+        }
+      })
+      .catch((err) => {
+        console.error('Error loading auth session:', err)
+      })
+      .finally(() => {
+        clearTimeout(timeoutId)
+        setIsLoading(false)
+      })
 
     // Listen for auth changes
     const { data: { subscription } } = onAuthStateChanged(async (_event, session) => {
