@@ -25,6 +25,15 @@ function formatDate(str: string) {
   return new Date(str).toLocaleDateString('es-AR', { day: '2-digit', month: 'short' })
 }
 
+function getBrandLogo(logo?: string | null) {
+  const trimmedLogo = logo?.trim()
+  return trimmedLogo ? trimmedLogo : null
+}
+
+function getBrandInitial(name?: string | null) {
+  return name?.trim()?.charAt(0).toUpperCase() || 'M'
+}
+
 export default function CampaignsPage() {
   const [tab, setTab] = useState<'applications' | 'challenges'>('applications')
   const { currentUser } = useAuth()
@@ -96,23 +105,32 @@ export default function CampaignsPage() {
             applications.map(app => {
               const campaign = app.exchanges?.campaigns
               if (!campaign) return null
+              const brandName = campaign.brand_profiles?.name?.trim() || 'Marca'
+              const brandLogo = getBrandLogo(campaign.brand_profiles?.logo)
+              const brandInitial = getBrandInitial(brandName)
 
               return (
                 <div key={app.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center overflow-hidden">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={campaign.brand_profiles?.logo}
-                          alt={campaign.brand_profiles?.name}
-                          className="w-8 h-8 object-contain"
-                          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
-                        />
+                        {brandLogo ? (
+                          <>
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={brandLogo}
+                              alt={brandName}
+                              className="w-8 h-8 object-contain"
+                              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+                            />
+                          </>
+                        ) : (
+                          <span className="text-xs font-semibold text-gray-500">{brandInitial}</span>
+                        )}
                       </div>
                       <div>
                         <div className="font-semibold text-gray-900">{campaign.title}</div>
-                        <div className="text-sm text-gray-400">{campaign.brand_profiles?.name} · {formatDate(app.created_at)}</div>
+                        <div className="text-sm text-gray-400">{brandName} · {formatDate(app.created_at)}</div>
                       </div>
                     </div>
                     <span className={`text-xs font-semibold px-3 py-1 rounded-full border ${statusColors[app.status]}`}>
@@ -177,23 +195,32 @@ export default function CampaignsPage() {
               if (!challenge) return null
               const campaign = challenge.campaigns
               const currentDay = challenge.challenge_days?.length || 1
+              const brandName = campaign?.brand_profiles?.name?.trim() || 'Marca'
+              const brandLogo = getBrandLogo(campaign?.brand_profiles?.logo)
+              const brandInitial = getBrandInitial(brandName)
 
               return (
                 <div key={sub.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center overflow-hidden">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={campaign?.brand_profiles?.logo}
-                          alt={campaign?.brand_profiles?.name}
-                          className="w-8 h-8 object-contain"
-                          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
-                        />
+                        {brandLogo ? (
+                          <>
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={brandLogo}
+                              alt={brandName}
+                              className="w-8 h-8 object-contain"
+                              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+                            />
+                          </>
+                        ) : (
+                          <span className="text-xs font-semibold text-gray-500">{brandInitial}</span>
+                        )}
                       </div>
                       <div>
                         <div className="font-semibold text-gray-900">{campaign?.title}</div>
-                        <div className="text-sm text-gray-400">{campaign?.brand_profiles?.name}</div>
+                        <div className="text-sm text-gray-400">{brandName}</div>
                       </div>
                     </div>
                     <span className="text-xs font-semibold px-3 py-1 rounded-full bg-orange-50 text-orange-700 border border-orange-200">

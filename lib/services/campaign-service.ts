@@ -43,7 +43,7 @@ interface CreateCampaignInput {
   }
 }
 
-const DEFAULT_TIMEOUT_MS = 12000
+const DEFAULT_TIMEOUT_MS = 30000
 
 function getDefaultExchangeQuestions(input: CreateCampaignInput['exchange']): ExchangeFormQuestionInput[] {
   const requirementPrompt = input?.requirementsBrief?.trim()

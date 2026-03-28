@@ -689,6 +689,71 @@ create policy "exchange_application_answers: usuario crea propias" on exchange_a
     )
   );
 
+-- challenges: visibles para campañas activas y gestionables por la marca dueña
+create policy "challenges: lectura según campaña" on challenges
+  for select using (
+    campaign_id in (select id from campaigns where status = 'active')
+    or campaign_id in (
+      select id from campaigns where brand_id in (
+        select id from brand_profiles where user_id = auth.uid()
+      )
+    )
+  );
+
+create policy "challenges: marca gestiona los suyos" on challenges
+  for all using (
+    campaign_id in (
+      select id from campaigns where brand_id in (
+        select id from brand_profiles where user_id = auth.uid()
+      )
+    )
+  )
+  with check (
+    campaign_id in (
+      select id from campaigns where brand_id in (
+        select id from brand_profiles where user_id = auth.uid()
+      )
+    )
+  );
+
+-- challenge_days: visibles según challenge/campaña y gestionables por la marca dueña
+create policy "challenge_days: lectura según challenge" on challenge_days
+  for select using (
+    challenge_id in (
+      select ch.id
+      from challenges ch
+      join campaigns c on c.id = ch.campaign_id
+      where c.status = 'active'
+    )
+    or challenge_id in (
+      select ch.id
+      from challenges ch
+      join campaigns c on c.id = ch.campaign_id
+      join brand_profiles bp on bp.id = c.brand_id
+      where bp.user_id = auth.uid()
+    )
+  );
+
+create policy "challenge_days: marca gestiona" on challenge_days
+  for all using (
+    challenge_id in (
+      select ch.id
+      from challenges ch
+      join campaigns c on c.id = ch.campaign_id
+      join brand_profiles bp on bp.id = c.brand_id
+      where bp.user_id = auth.uid()
+    )
+  )
+  with check (
+    challenge_id in (
+      select ch.id
+      from challenges ch
+      join campaigns c on c.id = ch.campaign_id
+      join brand_profiles bp on bp.id = c.brand_id
+      where bp.user_id = auth.uid()
+    )
+  );
+
 -- challenge_submissions: usuario ve las suyas, marca ve las de sus retos
 create policy "submissions: usuario ve las suyas" on challenge_submissions
   for select using (
