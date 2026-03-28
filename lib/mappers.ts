@@ -1,4 +1,21 @@
-import type { Campaign, UserProfile, BrandProfile, Exchange, Challenge } from './types'
+import type {
+  Campaign,
+  UserProfile,
+  BrandProfile,
+  Exchange,
+  Challenge,
+  ExchangeFormQuestion,
+  ExchangeApplicationAnswer,
+  ApplicationStatus,
+} from './types'
+
+function takeRelation<T>(value: unknown): T | null {
+  if (Array.isArray(value)) {
+    return (value[0] as T) || null
+  }
+
+  return (value as T) || null
+}
 
 export function mapUserProfile(row: Record<string, unknown>): UserProfile {
   return {
@@ -34,9 +51,13 @@ export function mapBrandProfile(row: Record<string, unknown>): BrandProfile {
 }
 
 export function mapCampaign(row: Record<string, unknown>): Campaign {
-  const brandProfile = row.brand_profiles as Record<string, unknown>
-  const exchangeRow = row.exchanges as Record<string, unknown> | null
-  const challengeRow = row.challenges as Record<string, unknown> | null
+  const brandProfile = takeRelation<Record<string, unknown>>(row.brand_profiles) || {}
+  const exchangeRow = takeRelation<Record<string, unknown>>(row.exchanges)
+  const challengeRow = takeRelation<Record<string, unknown>>(row.challenges)
+  const exchangeQuestions = ((exchangeRow?.exchange_form_questions as Record<string, unknown>[]) || [])
+    .map(question => mapExchangeFormQuestion(question))
+    .sort((a, b) => a.position - b.position)
+  const currentUserApplication = ((exchangeRow?.exchange_applications as Record<string, unknown>[]) || [])[0]
 
   const exchange: Exchange | undefined = exchangeRow ? {
     id: exchangeRow.id as string,
@@ -49,6 +70,8 @@ export function mapCampaign(row: Record<string, unknown>): Campaign {
     slots: (exchangeRow.slots as number) || 1,
     deadline: (exchangeRow.deadline as string) || '',
     applicantsCount: 0,
+    acceptedApplicantsCount: 0,
+    formQuestions: exchangeQuestions,
   } : undefined
 
   const challenge: Challenge | undefined = challengeRow ? {
@@ -79,7 +102,35 @@ export function mapCampaign(row: Record<string, unknown>): Campaign {
     description: (row.description as string) || '',
     status: row.status as Campaign['status'],
     createdAt: row.created_at as string,
+    currentUserApplicationStatus: currentUserApplication?.status as ApplicationStatus | undefined,
     exchange,
     challenge,
+  }
+}
+
+export function mapExchangeFormQuestion(row: Record<string, unknown>): ExchangeFormQuestion {
+  return {
+    id: row.id as string,
+    exchangeId: row.exchange_id as string,
+    label: row.label as string,
+    fieldType: row.field_type as ExchangeFormQuestion['fieldType'],
+    required: Boolean(row.required),
+    position: (row.position as number) || 0,
+    options: Array.isArray(row.options) ? row.options.map(option => String(option)) : [],
+  }
+}
+
+export function mapExchangeApplicationAnswer(row: Record<string, unknown>): ExchangeApplicationAnswer {
+  const answerJson = row.answer_json
+
+  return {
+    id: row.id as string,
+    applicationId: row.application_id as string,
+    questionId: row.question_id as string,
+    answerText: (row.answer_text as string) || '',
+    answerJson: Array.isArray(answerJson) ? answerJson.map(value => String(value)) : undefined,
+    question: row.exchange_form_questions
+      ? mapExchangeFormQuestion(row.exchange_form_questions as Record<string, unknown>)
+      : undefined,
   }
 }
