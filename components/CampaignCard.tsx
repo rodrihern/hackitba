@@ -1,0 +1,141 @@
+'use client'
+
+import Link from 'next/link'
+import type { Campaign } from '@/lib/types'
+
+function formatDate(dateStr: string) {
+  return new Date(dateStr).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })
+}
+
+function formatNumber(n: number) {
+  if (n >= 1000) return `${(n / 1000).toFixed(1)}k`
+  return n.toString()
+}
+
+interface Props {
+  campaign: Campaign
+  href?: string
+  onApply?: () => void
+  showBrand?: boolean
+}
+
+export default function CampaignCard({ campaign, href, onApply, showBrand = true }: Props) {
+  const isExchange = campaign.type === 'exchange'
+  const isChallenge = campaign.type === 'challenge'
+
+  return (
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden group">
+      {/* Header gradient */}
+      <div className={`h-2 w-full ${isExchange ? 'bg-gradient-to-r from-indigo-500 to-violet-500' : 'bg-gradient-to-r from-orange-400 to-pink-500'}`} />
+
+      <div className="p-5">
+        {/* Brand + type */}
+        {showBrand && (
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-gray-50 border border-gray-100 flex items-center justify-center overflow-hidden">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={campaign.brandLogo}
+                  alt={campaign.brandName}
+                  className="w-6 h-6 object-contain"
+                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+                />
+              </div>
+              <span className="text-sm font-medium text-gray-700">{campaign.brandName}</span>
+            </div>
+            <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
+              isExchange
+                ? 'bg-indigo-50 text-indigo-700'
+                : 'bg-orange-50 text-orange-700'
+            }`}>
+              {isExchange ? 'Canje' : 'Reto'}
+            </span>
+          </div>
+        )}
+
+        {/* Title */}
+        <h3 className="font-semibold text-gray-900 text-base leading-snug mb-2 line-clamp-2 group-hover:text-indigo-600 transition-colors">
+          {campaign.title}
+        </h3>
+
+        {/* Description */}
+        <p className="text-sm text-gray-500 line-clamp-2 mb-4 leading-relaxed">
+          {campaign.description}
+        </p>
+
+        {/* Details */}
+        {isExchange && campaign.exchange && (
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-400">Recompensa:</span>
+              <span className="text-xs font-medium text-gray-700 line-clamp-1">{campaign.exchange.rewardDescription}</span>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-1">
+                <span className="text-xs text-gray-400">Slots:</span>
+                <span className="text-xs font-semibold text-indigo-600">
+                  {campaign.exchange.slots - campaign.exchange.applicantsCount > 0
+                    ? `${campaign.exchange.slots - Math.min(campaign.exchange.applicantsCount, campaign.exchange.slots)} restantes`
+                    : 'Lleno'}
+                </span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="text-xs text-gray-400">Cierra:</span>
+                <span className="text-xs font-medium text-gray-600">{formatDate(campaign.exchange.deadline)}</span>
+              </div>
+            </div>
+            {campaign.exchange.moneyAmount && campaign.exchange.moneyAmount > 0 && (
+              <div className="flex items-center gap-1">
+                <span className="text-xs bg-green-50 text-green-700 font-semibold px-2 py-0.5 rounded-full">
+                  + ${formatNumber(campaign.exchange.moneyAmount)} ARS
+                </span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {isChallenge && campaign.challenge && (
+          <div className="space-y-2">
+            {campaign.challenge.hasLeaderboard && (
+              <div className="flex items-center gap-2">
+                <span className="text-xs bg-yellow-50 text-yellow-700 font-medium px-2 py-0.5 rounded-full">
+                  🏆 Leaderboard
+                </span>
+              </div>
+            )}
+            <div className="flex items-center gap-4">
+              {campaign.challenge.isMultiDay && (
+                <span className="text-xs text-gray-500">
+                  {campaign.challenge.totalDays} días
+                </span>
+              )}
+              <span className="text-xs text-gray-500">
+                {campaign.challenge.maxWinners} ganadores
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* CTA */}
+        <div className="mt-4 flex gap-2">
+          {href ? (
+            <Link
+              href={href}
+              className="flex-1 text-center bg-indigo-600 text-white text-sm font-semibold py-2.5 rounded-xl hover:bg-indigo-700 transition-colors"
+            >
+              Ver detalle
+            </Link>
+          ) : (
+            <button
+              onClick={onApply}
+              className="flex-1 bg-indigo-600 text-white text-sm font-semibold py-2.5 rounded-xl hover:bg-indigo-700 transition-colors"
+            >
+              Aplicar
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
