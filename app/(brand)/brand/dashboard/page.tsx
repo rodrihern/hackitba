@@ -5,8 +5,7 @@ export const dynamic = 'force-dynamic'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useAuth } from '@/lib/auth-context'
-import { supabase } from '@/lib/supabase'
-import { mapCampaign } from '@/lib/mappers'
+import { fetchBrandDashboardData } from '@/lib/services/brand-service'
 import type { BrandProfile, Campaign } from '@/lib/types'
 
 function formatDate(str: string) {
@@ -26,42 +25,10 @@ export default function BrandDashboardPage() {
       if (!brand?.id) return
 
       try {
-        const { data: campaignsData } = await supabase
-          .from('campaigns')
-          .select(`
-            *,
-            brand_profiles (id, name, logo),
-            exchanges (*),
-            challenges (*, challenge_days (*))
-          `)
-          .eq('brand_id', brand.id)
-          .order('created_at', { ascending: false })
-
-        if (campaignsData) {
-          const mapped = campaignsData.map(row => mapCampaign(row as Record<string, unknown>))
-          setCampaigns(mapped)
-
-          // Fetch exchange IDs to count applicants
-          const exchangeIds = campaignsData
-            .flatMap(c => c.exchanges ? [c.exchanges.id] : [])
-            .filter(Boolean)
-
-          if (exchangeIds.length > 0) {
-            const { count: totalCount } = await supabase
-              .from('exchange_applications')
-              .select('*', { count: 'exact', head: true })
-              .in('exchange_id', exchangeIds)
-
-            const { count: acceptedCnt } = await supabase
-              .from('exchange_applications')
-              .select('*', { count: 'exact', head: true })
-              .in('exchange_id', exchangeIds)
-              .eq('status', 'accepted')
-
-            setTotalApplicants(totalCount || 0)
-            setAcceptedCount(acceptedCnt || 0)
-          }
-        }
+        const data = await fetchBrandDashboardData(brand.id)
+        setCampaigns(data.campaigns)
+        setTotalApplicants(data.totalApplicants)
+        setAcceptedCount(data.acceptedCount)
       } catch (err) {
         console.error('Error fetching dashboard data:', err)
       } finally {

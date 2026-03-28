@@ -4,9 +4,9 @@ export const dynamic = 'force-dynamic'
 
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/lib/auth-context'
-import { supabase } from '@/lib/supabase'
 import LevelBadge from '@/components/LevelBadge'
 import type { UserProfile, UserLevel } from '@/lib/types'
+import { fetchUserPointsData, type UserBrandPointsRow, type UserRedemptionRow } from '@/lib/services/user-service'
 
 const levelThresholds: Record<UserLevel, { min: number; max: number; next: UserLevel | null }> = {
   Bronze:   { min: 0,     max: 2000,  next: 'Silver' },
@@ -16,28 +16,11 @@ const levelThresholds: Record<UserLevel, { min: number; max: number; next: UserL
   Diamond:  { min: 12000, max: 20000, next: null },
 }
 
-interface BrandPointsRow {
-  id: string
-  brand_id: string
-  points: number
-  brand_profiles: { id: string; name: string; logo: string }
-}
-
-interface RedemptionRow {
-  id: string
-  points_used: number
-  created_at: string
-  rewards: {
-    title: string
-    brand_profiles: { name: string }
-  }
-}
-
 export default function PointsPage() {
   const { currentUser } = useAuth()
   const profile = currentUser?.profile as UserProfile
-  const [brandPoints, setBrandPoints] = useState<BrandPointsRow[]>([])
-  const [redemptions, setRedemptions] = useState<RedemptionRow[]>([])
+  const [brandPoints, setBrandPoints] = useState<UserBrandPointsRow[]>([])
+  const [redemptions, setRedemptions] = useState<UserRedemptionRow[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
@@ -46,21 +29,9 @@ export default function PointsPage() {
       const userProfile = currentUser.profile as UserProfile
 
       try {
-        const [bpResult, redResult] = await Promise.all([
-          supabase
-            .from('brand_points')
-            .select('*, brand_profiles (id, name, logo)')
-            .eq('user_id', userProfile.id),
-          supabase
-            .from('redemptions')
-            .select('*, rewards (title, brand_profiles (name))')
-            .eq('user_id', userProfile.id)
-            .order('created_at', { ascending: false })
-            .limit(10)
-        ])
-
-        if (bpResult.data) setBrandPoints(bpResult.data as unknown as BrandPointsRow[])
-        if (redResult.data) setRedemptions(redResult.data as unknown as RedemptionRow[])
+        const data = await fetchUserPointsData(userProfile.id)
+        setBrandPoints(data.brandPoints)
+        setRedemptions(data.redemptions)
       } catch (err) {
         console.error('Error fetching points data:', err)
       } finally {

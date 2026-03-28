@@ -4,8 +4,8 @@ export const dynamic = 'force-dynamic'
 
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/lib/auth-context'
-import { supabase } from '@/lib/supabase'
 import type { Notification } from '@/lib/types'
+import { fetchUserNotifications, markAllNotificationsRead, markNotificationRead } from '@/lib/services/user-service'
 
 function formatRelativeTime(dateStr: string) {
   const date = new Date(dateStr)
@@ -29,22 +29,8 @@ export default function NotificationsPage() {
       if (!session?.user) return
 
       try {
-        const { data } = await supabase
-          .from('notifications')
-          .select('*')
-          .eq('user_id', session.user.id)
-          .order('created_at', { ascending: false })
-
-        if (data) {
-          setNotifications(data.map(n => ({
-            id: n.id,
-            userId: n.user_id,
-            title: n.title,
-            message: n.message,
-            read: n.read,
-            createdAt: n.created_at,
-          })))
-        }
+        const data = await fetchUserNotifications(session.user.id)
+        setNotifications(data)
       } catch (err) {
         console.error('Error fetching notifications:', err)
       } finally {
@@ -58,17 +44,13 @@ export default function NotificationsPage() {
   const markAllRead = async () => {
     if (!session?.user) return
 
-    await supabase
-      .from('notifications')
-      .update({ read: true })
-      .eq('user_id', session.user.id)
-      .eq('read', false)
+    await markAllNotificationsRead(session.user.id)
 
     setNotifications(prev => prev.map(n => ({ ...n, read: true })))
   }
 
   const markRead = async (id: string) => {
-    await supabase.from('notifications').update({ read: true }).eq('id', id)
+    await markNotificationRead(id)
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n))
   }
 

@@ -3,8 +3,7 @@
 export const dynamic = 'force-dynamic'
 
 import { useState, useEffect } from 'react'
-import { supabase } from '@/lib/supabase'
-import { mapCampaign } from '@/lib/mappers'
+import { fetchAllCampaigns } from '@/lib/services/user-service'
 import CampaignCard from '@/components/CampaignCard'
 import type { Campaign, CampaignType, CampaignStatus } from '@/lib/types'
 
@@ -19,19 +18,8 @@ export default function ExplorePage() {
   useEffect(() => {
     async function fetchCampaigns() {
       try {
-        const { data } = await supabase
-          .from('campaigns')
-          .select(`
-            *,
-            brand_profiles (id, name, logo),
-            exchanges (*),
-            challenges (*, challenge_days (*))
-          `)
-          .order('created_at', { ascending: false })
-
-        if (data) {
-          setCampaigns(data.map(row => mapCampaign(row as Record<string, unknown>)))
-        }
+        const data = await fetchAllCampaigns()
+        setCampaigns(data)
       } catch (err) {
         console.error('Error fetching campaigns:', err)
       } finally {

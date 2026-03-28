@@ -5,8 +5,7 @@ export const dynamic = 'force-dynamic'
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { useAuth } from '@/lib/auth-context'
-import { supabase } from '@/lib/supabase'
-import { mapCampaign } from '@/lib/mappers'
+import { fetchBrandCampaigns, updateCampaignStatus } from '@/lib/services/brand-service'
 import type { CampaignStatus, BrandProfile, Campaign } from '@/lib/types'
 
 function formatDate(str: string) {
@@ -24,20 +23,8 @@ export default function BrandCampaignsPage() {
     if (!brand?.id) return
 
     try {
-      const { data } = await supabase
-        .from('campaigns')
-        .select(`
-          *,
-          brand_profiles (id, name, logo),
-          exchanges (*),
-          challenges (*, challenge_days (*))
-        `)
-        .eq('brand_id', brand.id)
-        .order('created_at', { ascending: false })
-
-      if (data) {
-        setCampaigns(data.map(row => mapCampaign(row as Record<string, unknown>)))
-      }
+      const data = await fetchBrandCampaigns(brand.id)
+      setCampaigns(data)
     } catch (err) {
       console.error('Error fetching campaigns:', err)
     } finally {
@@ -50,12 +37,12 @@ export default function BrandCampaignsPage() {
   }, [fetchCampaigns])
 
   const publishCampaign = async (id: string) => {
-    await supabase.from('campaigns').update({ status: 'active' }).eq('id', id)
+    await updateCampaignStatus(id, 'active')
     await fetchCampaigns()
   }
 
   const closeCampaign = async (id: string) => {
-    await supabase.from('campaigns').update({ status: 'closed' }).eq('id', id)
+    await updateCampaignStatus(id, 'closed')
     await fetchCampaigns()
   }
 

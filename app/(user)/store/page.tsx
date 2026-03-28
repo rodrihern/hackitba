@@ -4,28 +4,20 @@ export const dynamic = 'force-dynamic'
 
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/lib/auth-context'
-import { supabase } from '@/lib/supabase'
 import RewardCard from '@/components/RewardCard'
 import type { Reward, UserProfile } from '@/lib/types'
-
-interface BrandPointsRow {
-  id: string
-  brand_id: string
-  points: number
-  brand_profiles: { id: string; name: string; logo: string }
-}
-
-interface BrandRow {
-  id: string
-  name: string
-  logo: string
-}
+import {
+  fetchUserStoreData,
+  redeemReward,
+  type StoreBrandRow,
+  type UserBrandPointsRow,
+} from '@/lib/services/user-service'
 
 export default function StorePage() {
   const { currentUser, isLoading: authLoading } = useAuth()
   const [rewards, setRewards] = useState<Reward[]>([])
-  const [brandPoints, setBrandPoints] = useState<BrandPointsRow[]>([])
-  const [brands, setBrands] = useState<BrandRow[]>([])
+  const [brandPoints, setBrandPoints] = useState<UserBrandPointsRow[]>([])
+  const [brands, setBrands] = useState<StoreBrandRow[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [selectedBrandId, setSelectedBrandId] = useState<string | 'all'>('all')
   const [redeemModal, setRedeemModal] = useState<Reward | null>(null)
@@ -45,33 +37,10 @@ export default function StorePage() {
       const userProfile = currentUser.profile as UserProfile
 
       try {
-        const [rewardsResult, bpResult, brandsResult] = await Promise.all([
-          supabase
-            .from('rewards')
-            .select('*')
-            .order('created_at', { ascending: false }),
-          supabase
-            .from('brand_points')
-            .select('*, brand_profiles (id, name, logo)')
-            .eq('user_id', userProfile.id),
-          supabase
-            .from('brand_profiles')
-            .select('id, name, logo')
-        ])
-
-        if (rewardsResult.data) {
-          setRewards(rewardsResult.data.map(r => ({
-            id: r.id,
-            brandId: r.brand_id,
-            title: r.title,
-            description: r.description || '',
-            pointsCost: r.points_cost,
-            rewardType: r.reward_type,
-            image: r.image || '',
-          })))
-        }
-        if (bpResult.data) setBrandPoints(bpResult.data as unknown as BrandPointsRow[])
-        if (brandsResult.data) setBrands(brandsResult.data as BrandRow[])
+        const data = await fetchUserStoreData(userProfile.id)
+        setRewards(data.rewards)
+        setBrandPoints(data.brandPoints)
+        setBrands(data.brands)
       } catch (err) {
         console.error('Error fetching store data:', err)
       } finally {
@@ -108,24 +77,13 @@ export default function StorePage() {
         return
       }
 
-      // Insert redemption
-      const { error: redemptionError } = await supabase.from('redemptions').insert({
-        reward_id: redeemModal.id,
-        user_id: userProfile.id,
-        points_used: redeemModal.pointsCost,
-        money_paid: 0,
+      await redeemReward({
+        rewardId: redeemModal.id,
+        userProfileId: userProfile.id,
+        pointsUsed: redeemModal.pointsCost,
+        brandPointRowId: userBrandPts.id,
+        remainingPoints: userBrandPts.points - redeemModal.pointsCost,
       })
-
-      if (redemptionError) {
-        setRedeemError(redemptionError.message)
-        setRedeemLoading(false)
-        return
-      }
-
-      // Deduct points
-      await supabase.from('brand_points').update({
-        points: userBrandPts.points - redeemModal.pointsCost
-      }).eq('id', userBrandPts.id)
 
       // Update local brand points state
       setBrandPoints(prev => prev.map(bp =>

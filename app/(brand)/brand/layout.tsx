@@ -19,7 +19,7 @@ export default function BrandLayout({ children }: { children: React.ReactNode })
   const { currentUser, isLoading, logout } = useAuth()
   const router = useRouter()
   const pathname = usePathname()
-  const [logoLoadError, setLogoLoadError] = useState(false)
+  const [failedLogoSrc, setFailedLogoSrc] = useState<string | null>(null)
 
   useEffect(() => {
     if (!isLoading && (!currentUser || currentUser.role !== 'brand')) {
@@ -28,10 +28,6 @@ export default function BrandLayout({ children }: { children: React.ReactNode })
   }, [currentUser, isLoading, router])
 
   const rawLogo = (currentUser?.profile as BrandProfile | undefined)?.logo?.trim() ?? ''
-
-  useEffect(() => {
-    setLogoLoadError(false)
-  }, [rawLogo])
 
   if (isLoading || !currentUser || currentUser.role !== 'brand') {
     return (
@@ -42,7 +38,7 @@ export default function BrandLayout({ children }: { children: React.ReactNode })
   }
 
   const profile = currentUser.profile as BrandProfile
-  const showLogoImage = Boolean(rawLogo) && !logoLoadError
+  const showLogoImage = Boolean(rawLogo) && failedLogoSrc !== rawLogo
   const brandInitial = profile.name?.[0]?.toUpperCase() ?? 'B'
 
   return (
@@ -93,7 +89,7 @@ export default function BrandLayout({ children }: { children: React.ReactNode })
                     src={rawLogo}
                     alt={profile.name}
                     className="w-7 h-7 object-contain"
-                    onError={() => setLogoLoadError(true)}
+                    onError={() => setFailedLogoSrc(rawLogo)}
                   />
                 </>
               ) : (

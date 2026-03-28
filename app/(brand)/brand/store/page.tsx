@@ -4,9 +4,9 @@ export const dynamic = 'force-dynamic'
 
 import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '@/lib/auth-context'
-import { supabase } from '@/lib/supabase'
 import RewardCard from '@/components/RewardCard'
 import type { BrandProfile, Reward, RewardType } from '@/lib/types'
+import { createReward, deleteReward, fetchBrandRewards, updateReward } from '@/lib/services/reward-service'
 
 const rewardTypes: { value: RewardType; label: string }[] = [
   { value: 'product', label: 'Producto' },
@@ -36,20 +36,6 @@ export default function BrandStorePage() {
   const [saveError, setSaveError] = useState('')
   const [isSaving, setIsSaving] = useState(false)
 
-  const withTimeout = async <T,>(promise: Promise<T>, timeoutMs = 10000): Promise<T> => {
-    let timeoutId: ReturnType<typeof setTimeout> | undefined
-
-    const timeoutPromise = new Promise<never>((_, reject) => {
-      timeoutId = setTimeout(() => reject(new Error('Request timed out')), timeoutMs)
-    })
-
-    try {
-      return await Promise.race([promise, timeoutPromise])
-    } finally {
-      if (timeoutId) clearTimeout(timeoutId)
-    }
-  }
-
   const fetchRewards = useCallback(async () => {
     // Wait for auth to finish loading
     if (authLoading) return
@@ -62,31 +48,8 @@ export default function BrandStorePage() {
     }
 
     try {
-      const { data, error } = await withTimeout(
-        supabase
-          .from('rewards')
-          .select('*')
-          .eq('brand_id', brand.id),
-        10000
-      )
-
-      if (error) {
-        throw new Error(error.message)
-      }
-
-      if (data) {
-        setRewards(data.map(r => ({
-          id: r.id,
-          brandId: r.brand_id,
-          title: r.title,
-          description: r.description || '',
-          pointsCost: r.points_cost,
-          rewardType: r.reward_type,
-          image: r.image || '',
-        })))
-      } else {
-        setRewards([])
-      }
+      const data = await fetchBrandRewards(brand.id)
+      setRewards(data)
     } catch (err) {
       console.error('Error fetching rewards:', err)
       setRewards([])
@@ -127,26 +90,23 @@ export default function BrandStorePage() {
 
     try {
       if (editingReward) {
-        const { error } = await supabase.from('rewards').update({
+        await updateReward({
+          id: editingReward.id,
           title: form.title,
           description: form.description,
-          points_cost: parseInt(form.pointsCost),
-          reward_type: form.rewardType,
-          image: form.image || null,
-        }).eq('id', editingReward.id)
-
-        if (error) throw new Error(error.message)
-      } else {
-        const { error } = await supabase.from('rewards').insert({
-          brand_id: brand.id,
-          title: form.title,
-          description: form.description,
-          points_cost: parseInt(form.pointsCost),
-          reward_type: form.rewardType,
-          image: form.image || 'https://images.unsplash.com/photo-1556905055-8f358a7a47b2?w=400',
+          pointsCost: parseInt(form.pointsCost, 10),
+          rewardType: form.rewardType,
+          image: form.image || '',
         })
-
-        if (error) throw new Error(error.message)
+      } else {
+        await createReward({
+          brandId: brand.id,
+          title: form.title,
+          description: form.description,
+          pointsCost: parseInt(form.pointsCost, 10),
+          rewardType: form.rewardType,
+          image: form.image || '',
+        })
       }
 
       await fetchRewards()
@@ -160,7 +120,7 @@ export default function BrandStorePage() {
 
   const handleDelete = async (id: string) => {
     try {
-      await supabase.from('rewards').delete().eq('id', id)
+      await deleteReward(id)
       setRewards(prev => prev.filter(r => r.id !== id))
       setDeleteConfirm(null)
     } catch (err) {

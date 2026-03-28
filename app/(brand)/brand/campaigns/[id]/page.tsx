@@ -5,10 +5,18 @@ export const dynamic = 'force-dynamic'
 import { useState, useEffect, useCallback } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
-import { supabase } from '@/lib/supabase'
 import { mapUserProfile } from '@/lib/mappers'
 import LeaderboardRow from '@/components/LeaderboardRow'
-import type { ApplicationStatus, UserProfile } from '@/lib/types'
+import type { ApplicationStatus } from '@/lib/types'
+import {
+  createNotification,
+  fetchCampaignDetail,
+  type ApplicationRow,
+  type CampaignData,
+  type SubmissionRow,
+  updateChallengeSubmissionScore,
+  updateExchangeApplicationStatus,
+} from '@/lib/services/brand-service'
 
 const statusLabels: Record<ApplicationStatus, string> = {
   applied: 'Aplicada',
@@ -28,46 +36,6 @@ function formatDate(str: string) {
   return new Date(str).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })
 }
 
-interface CampaignData {
-  id: string
-  title: string
-  description: string
-  type: 'exchange' | 'challenge'
-  status: string
-  brand_profiles: { name: string; logo: string }
-  exchanges?: {
-    id: string
-    slots: number
-    deadline: string
-    reward_description: string
-    exchange_applications?: ApplicationRow[]
-  }
-  challenges?: {
-    id: string
-    total_days: number
-    max_winners: number
-    challenge_days?: { id: string; day_number: number }[]
-    challenge_submissions?: SubmissionRow[]
-  }
-}
-
-interface ApplicationRow {
-  id: string
-  status: ApplicationStatus
-  proposal_text: string
-  created_at: string
-  user_profiles: Record<string, unknown>
-}
-
-interface SubmissionRow {
-  id: string
-  submission_url: string
-  submission_text: string
-  score?: number
-  created_at: string
-  user_profiles: Record<string, unknown>
-}
-
 export default function CampaignDetailPage() {
   const { id } = useParams<{ id: string }>()
   const [campaign, setCampaign] = useState<CampaignData | null>(null)
@@ -77,30 +45,7 @@ export default function CampaignDetailPage() {
 
   const fetchCampaign = useCallback(async () => {
     try {
-      const { data } = await supabase
-        .from('campaigns')
-        .select(`
-          *,
-          brand_profiles (name, logo),
-          exchanges (
-            *,
-            exchange_applications (
-              *,
-              user_profiles (*)
-            )
-          ),
-          challenges (
-            *,
-            challenge_days (*),
-            challenge_submissions (
-              *,
-              user_profiles (*)
-            )
-          )
-        `)
-        .eq('id', id)
-        .single()
-
+      const data = await fetchCampaignDetail(id)
       if (data) {
         setCampaign(data as unknown as CampaignData)
         // Initialize application statuses
@@ -126,17 +71,16 @@ export default function CampaignDetailPage() {
   }, [fetchCampaign])
 
   const updateStatus = async (appId: string, status: ApplicationStatus) => {
-    await supabase.from('exchange_applications').update({ status }).eq('id', appId)
+    await updateExchangeApplicationStatus(appId, status)
 
     if (status === 'accepted' && campaign) {
       const app = campaign.exchanges?.exchange_applications?.find(a => a.id === appId)
       if (app?.user_profiles) {
         const userProfile = mapUserProfile(app.user_profiles)
-        await supabase.from('notifications').insert({
-          user_id: (app.user_profiles as Record<string, unknown>).user_id,
+        await createNotification({
+          userId: (app.user_profiles as Record<string, unknown>).user_id as string,
           title: 'Aplicación aceptada',
           message: `Tu aplicación para "${campaign.title}" fue aceptada.`,
-          read: false,
         })
         void userProfile // used for type narrowing
       }
@@ -146,7 +90,7 @@ export default function CampaignDetailPage() {
   }
 
   const updateScore = async (submissionId: string, score: number) => {
-    await supabase.from('challenge_submissions').update({ score }).eq('id', submissionId)
+    await updateChallengeSubmissionScore(submissionId, score)
     setScores(prev => ({ ...prev, [submissionId]: score }))
   }
 

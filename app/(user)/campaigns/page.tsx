@@ -4,8 +4,8 @@ export const dynamic = 'force-dynamic'
 
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/lib/auth-context'
-import { supabase } from '@/lib/supabase'
 import type { ApplicationStatus, UserProfile } from '@/lib/types'
+import { fetchUserCampaignsData, type UserCampaignApplicationRow, type UserChallengeSubmissionRow } from '@/lib/services/user-service'
 
 const statusLabels: Record<ApplicationStatus, string> = {
   applied: 'Aplicada',
@@ -25,42 +25,11 @@ function formatDate(str: string) {
   return new Date(str).toLocaleDateString('es-AR', { day: '2-digit', month: 'short' })
 }
 
-interface ApplicationRow {
-  id: string
-  status: ApplicationStatus
-  proposal_text: string
-  created_at: string
-  exchanges: {
-    id: string
-    campaigns: {
-      id: string
-      title: string
-      brand_profiles: { name: string; logo: string }
-    }
-  }
-}
-
-interface ChallengeSubRow {
-  id: string
-  created_at: string
-  challenges: {
-    id: string
-    is_multi_day: boolean
-    total_days: number
-    challenge_days: { id: string; day_number: number }[]
-    campaigns: {
-      id: string
-      title: string
-      brand_profiles: { name: string; logo: string }
-    }
-  }
-}
-
 export default function CampaignsPage() {
   const [tab, setTab] = useState<'applications' | 'challenges'>('applications')
   const { currentUser } = useAuth()
-  const [applications, setApplications] = useState<ApplicationRow[]>([])
-  const [challengeSubs, setChallengeSubs] = useState<ChallengeSubRow[]>([])
+  const [applications, setApplications] = useState<UserCampaignApplicationRow[]>([])
+  const [challengeSubs, setChallengeSubs] = useState<UserChallengeSubmissionRow[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
@@ -69,33 +38,9 @@ export default function CampaignsPage() {
       const userProfile = currentUser.profile as UserProfile
 
       try {
-        const [appsResult, subsResult] = await Promise.all([
-          supabase
-            .from('exchange_applications')
-            .select(`
-              *,
-              exchanges (
-                *,
-                campaigns (*, brand_profiles (name, logo))
-              )
-            `)
-            .eq('user_id', userProfile.id)
-            .order('created_at', { ascending: false }),
-          supabase
-            .from('challenge_submissions')
-            .select(`
-              *,
-              challenges (
-                *,
-                campaigns (*, brand_profiles (name, logo)),
-                challenge_days (*)
-              )
-            `)
-            .eq('user_id', userProfile.id)
-        ])
-
-        if (appsResult.data) setApplications(appsResult.data as unknown as ApplicationRow[])
-        if (subsResult.data) setChallengeSubs(subsResult.data as unknown as ChallengeSubRow[])
+        const data = await fetchUserCampaignsData(userProfile.id)
+        setApplications(data.applications)
+        setChallengeSubs(data.challengeSubs)
       } catch (err) {
         console.error('Error fetching user campaigns:', err)
       } finally {

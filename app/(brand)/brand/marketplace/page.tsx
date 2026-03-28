@@ -2,10 +2,9 @@
 
 export const dynamic = 'force-dynamic'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '@/lib/auth-context'
-import { supabase } from '@/lib/supabase'
-import { mapUserProfile, mapCampaign } from '@/lib/mappers'
+import { fetchMarketplaceData, inviteUserToExchange } from '@/lib/services/brand-service'
 import UserCard from '@/components/UserCard'
 import LevelBadge from '@/components/LevelBadge'
 import type { UserProfile, UserLevel, BrandProfile, Campaign } from '@/lib/types'
@@ -34,79 +33,30 @@ export default function MarketplacePage() {
   const [selectedCampaignId, setSelectedCampaignId] = useState<string>('')
   const [inviteLoading, setInviteLoading] = useState(false)
 
-  const withTimeout = async <T,>(promise: Promise<T>, timeoutMs = 10000): Promise<T> => {
-    let timeoutId: ReturnType<typeof setTimeout> | undefined
-
-    const timeoutPromise = new Promise<never>((_, reject) => {
-      timeoutId = setTimeout(() => reject(new Error('Request timed out')), timeoutMs)
-    })
-
+  const loadMarketplace = useCallback(async () => {
     try {
-      return await Promise.race([promise, timeoutPromise])
+      const { users, brandExchanges } = await fetchMarketplaceData(brand?.id)
+      setUsers(users)
+      setBrandExchanges(brandExchanges)
+      setLoadError('')
+    } catch (err) {
+      console.error('Error fetching marketplace data:', err)
+      setUsers([])
+      setBrandExchanges([])
+      setLoadError(err instanceof Error ? err.message : 'No se pudo cargar el marketplace')
     } finally {
-      if (timeoutId) clearTimeout(timeoutId)
+      setIsLoading(false)
     }
-  }
+  }, [brand?.id])
 
   useEffect(() => {
     async function fetchData() {
       setLoadError('')
-
-      try {
-        const usersQuery = supabase
-          .from('user_profiles')
-          .select('*')
-          .order('total_points', { ascending: false })
-
-        const campaignsQuery = brand?.id
-          ? supabase
-              .from('campaigns')
-              .select(`
-                *,
-                brand_profiles (id, name, logo),
-                exchanges (*),
-                challenges (*, challenge_days (*))
-              `)
-              .eq('brand_id', brand.id)
-              .eq('type', 'exchange')
-              .eq('status', 'active')
-          : Promise.resolve(null)
-
-        const [usersResult, campaignsResult] = await withTimeout(
-          Promise.all([usersQuery, campaignsQuery]),
-          10000
-        )
-
-        if (usersResult.error) {
-          throw new Error(usersResult.error.message)
-        }
-
-        if (campaignsResult && campaignsResult.error) {
-          throw new Error(campaignsResult.error.message)
-        }
-
-        if (usersResult.data) {
-          setUsers(usersResult.data.map(row => mapUserProfile(row as Record<string, unknown>)))
-        } else {
-          setUsers([])
-        }
-        if (campaignsResult?.data) {
-          setBrandExchanges(campaignsResult.data.map(row => mapCampaign(row as Record<string, unknown>)))
-        } else {
-          setBrandExchanges([])
-        }
-      } catch (err) {
-        console.error('Error fetching marketplace data:', err)
-        setUsers([])
-        setBrandExchanges([])
-        setLoadError(err instanceof Error ? err.message : 'No se pudo cargar el marketplace')
-      } finally {
-        setIsLoading(false)
-      }
+      await loadMarketplace()
     }
 
     fetchData()
-  }, [brand?.id])
+  }, [loadMarketplace])
 
   const filtered = users.filter(user => {
     const matchesSearch = search === '' ||
@@ -138,21 +88,12 @@ export default function MarketplacePage() {
 
     setInviteLoading(true)
     try {
-      // Create invitation
-      await supabase.from('invitations').insert({
-        brand_id: brand.id,
-        user_id: inviteModal.id,
-        campaign_id: selectedCampaignId,
-        type: 'exchange',
-        status: 'pending',
-      })
-
-      // Send notification to user
-      await supabase.from('notifications').insert({
-        user_id: inviteModal.userId,
-        title: 'Nueva invitación',
-        message: `${brand.name} te invitó a participar en una colaboración.`,
-        read: false,
+      await inviteUserToExchange({
+        brandId: brand.id,
+        userProfileId: inviteModal.id,
+        userAuthId: inviteModal.userId,
+        campaignId: selectedCampaignId,
+        brandName: brand.name,
       })
 
       setInvitedUsers(prev => new Set([...prev, inviteModal.id]))
@@ -285,44 +226,7 @@ export default function MarketplacePage() {
               <button
                 onClick={() => {
                   setIsLoading(true)
-                  void (async () => {
-                    try {
-                      const usersQuery = supabase
-                        .from('user_profiles')
-                        .select('*')
-                        .order('total_points', { ascending: false })
-
-                      const campaignsQuery = brand?.id
-                        ? supabase
-                            .from('campaigns')
-                            .select(`
-                              *,
-                              brand_profiles (id, name, logo),
-                              exchanges (*),
-                              challenges (*, challenge_days (*))
-                            `)
-                            .eq('brand_id', brand.id)
-                            .eq('type', 'exchange')
-                            .eq('status', 'active')
-                        : Promise.resolve(null)
-
-                      const [usersResult, campaignsResult] = await withTimeout(
-                        Promise.all([usersQuery, campaignsQuery]),
-                        10000
-                      )
-
-                      if (usersResult.error) throw new Error(usersResult.error.message)
-                      if (campaignsResult && campaignsResult.error) throw new Error(campaignsResult.error.message)
-
-                      setUsers((usersResult.data || []).map(row => mapUserProfile(row as Record<string, unknown>)))
-                      setBrandExchanges((campaignsResult?.data || []).map(row => mapCampaign(row as Record<string, unknown>)))
-                      setLoadError('')
-                    } catch (err) {
-                      setLoadError(err instanceof Error ? err.message : 'No se pudo cargar el marketplace')
-                    } finally {
-                      setIsLoading(false)
-                    }
-                  })()
+                  void loadMarketplace()
                 }}
                 className="bg-red-600 text-white text-sm font-medium px-4 py-2 rounded-xl hover:bg-red-700 transition-colors"
               >
