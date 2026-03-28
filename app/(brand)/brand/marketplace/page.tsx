@@ -7,11 +7,52 @@ import { useAuth } from '@/lib/auth-context'
 import { fetchMarketplaceData, inviteUserToExchange } from '@/lib/services/brand-service'
 import UserCard from '@/components/UserCard'
 import LevelBadge from '@/components/LevelBadge'
+import { FilterChip, FilterGroup } from '@/components/FilterChip'
 import type { UserProfile, UserLevel, BrandProfile, Campaign } from '@/lib/types'
 
 const categories = ['Todos', 'Fitness & Salud', 'Moda & Belleza', 'Gastronomía', 'Tecnología', 'Viajes', 'Música', 'Gaming', 'Lifestyle']
 const levels: (UserLevel | 'Todos')[] = ['Todos', 'Bronze', 'Silver', 'Gold', 'Platinum', 'Diamond']
 const platforms = ['Todos', 'Instagram', 'TikTok', 'YouTube']
+
+function toggleFilterWithTodos<T>(currentFilter: Set<T>, selectedItem: T, isTodos: boolean): Set<T> {
+  const newFilter = new Set(currentFilter)
+  
+  if (newFilter.has(selectedItem)) {
+    // If already selected, deselect it
+    newFilter.delete(selectedItem)
+    // If we just removed something specific and now it's empty, add "Todos"
+    if (!isTodos && newFilter.size === 0) {
+      newFilter.add('Todos' as T)
+    }
+  } else {
+    // If not selected, select it
+    if (isTodos) {
+      // If "Todos" is selected, clear everything and add only "Todos"
+      newFilter.clear()
+      newFilter.add('Todos' as T)
+    } else {
+      // If a specific option is selected, remove "Todos"
+      newFilter.delete('Todos' as T)
+      newFilter.add(selectedItem)
+    }
+  }
+  
+  return newFilter
+}
+
+function isVisuallySelected<T>(filter: Set<T>, item: T, isTodos: boolean): boolean {
+  if (isTodos) {
+    // "Todos" is visually selected if it's in the logical state
+    return filter.has(item)
+  } else {
+    // If "Todos" is in the logical state, all items are visually selected
+    if (filter.has('Todos' as T)) {
+      return true
+    }
+    // Otherwise, only items in the logical state are visually selected
+    return filter.has(item)
+  }
+}
 
 export default function MarketplacePage() {
   const { currentUser } = useAuth()
@@ -24,14 +65,26 @@ export default function MarketplacePage() {
 
   const [search, setSearch] = useState('')
   const [aiSearch, setAiSearch] = useState('')
-  const [categoryFilter, setCategoryFilter] = useState('Todos')
-  const [levelFilter, setLevelFilter] = useState<UserLevel | 'Todos'>('Todos')
-  const [platformFilter, setPlatformFilter] = useState('Todos')
+  const [categoryFilter, setCategoryFilter] = useState<Set<string>>(new Set(['Todos']))
+  const [levelFilter, setLevelFilter] = useState<Set<UserLevel | 'Todos'>>(new Set(['Todos']))
+  const [platformFilter, setPlatformFilter] = useState<Set<string>>(new Set(['Todos']))
   const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null)
   const [invitedUsers, setInvitedUsers] = useState<Set<string>>(new Set())
   const [inviteModal, setInviteModal] = useState<UserProfile | null>(null)
   const [selectedCampaignId, setSelectedCampaignId] = useState<string>('')
   const [inviteLoading, setInviteLoading] = useState(false)
+
+  const toggleCategoryFilter = (cat: string) => {
+    setCategoryFilter(toggleFilterWithTodos(categoryFilter, cat, cat === 'Todos'))
+  }
+
+  const toggleLevelFilter = (level: UserLevel | 'Todos') => {
+    setLevelFilter(toggleFilterWithTodos(levelFilter, level, level === 'Todos'))
+  }
+
+  const togglePlatformFilter = (platform: string) => {
+    setPlatformFilter(toggleFilterWithTodos(platformFilter, platform, platform === 'Todos'))
+  }
 
   const loadMarketplace = useCallback(async () => {
     try {
@@ -64,12 +117,12 @@ export default function MarketplacePage() {
       user.bio.toLowerCase().includes(search.toLowerCase()) ||
       user.category.toLowerCase().includes(search.toLowerCase())
 
-    const matchesCategory = categoryFilter === 'Todos' || user.category === categoryFilter
-    const matchesLevel = levelFilter === 'Todos' || user.level === levelFilter
-    const matchesPlatform = platformFilter === 'Todos' ||
-      (platformFilter === 'Instagram' && user.followersInstagram > 0) ||
-      (platformFilter === 'TikTok' && user.followersTiktok > 0) ||
-      (platformFilter === 'YouTube' && user.followersYoutube > 0)
+    const matchesCategory = categoryFilter.has('Todos') || categoryFilter.has(user.category)
+    const matchesLevel = levelFilter.has('Todos') || levelFilter.has(user.level)
+    const matchesPlatform = platformFilter.has('Todos') ||
+      (platformFilter.has('Instagram') && user.followersInstagram > 0) ||
+      (platformFilter.has('TikTok') && user.followersTiktok > 0) ||
+      (platformFilter.has('YouTube') && user.followersYoutube > 0)
 
     return matchesSearch && matchesCategory && matchesLevel && matchesPlatform
   })
@@ -135,64 +188,57 @@ export default function MarketplacePage() {
         </div>
       </div>
 
-      <div className="flex gap-6">
+      <div className="flex gap-8">
         {/* Filter sidebar */}
-        <div className="w-52 flex-shrink-0 space-y-5">
-          <div>
-            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Categoría</div>
-            <div className="space-y-1">
-              {categories.map(cat => (
-                <button
-                  key={cat}
-                  onClick={() => setCategoryFilter(cat)}
-                  className={`w-full text-left text-sm px-3 py-1.5 rounded-lg transition-colors ${
-                    categoryFilter === cat
-                      ? 'bg-indigo-50 text-indigo-700 font-medium'
-                      : 'text-gray-600 hover:bg-gray-50'
-                  }`}
-                >
-                  {cat}
-                </button>
-              ))}
-            </div>
-          </div>
+        <div className="w-56 flex-shrink-0">
+          <div className="sticky top-8 space-y-8 bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+            <FilterGroup title="Categoría">
+              <div className="flex flex-wrap gap-2.5">
+                {categories.map(cat => (
+                  <FilterChip
+                    key={cat}
+                    label={cat}
+                    selected={categoryFilter.has(cat)}
+                    visualSelected={isVisuallySelected(categoryFilter, cat, cat === 'Todos')}
+                    onChange={() => toggleCategoryFilter(cat)}
+                    variant="category"
+                  />
+                ))}
+              </div>
+            </FilterGroup>
 
-          <div>
-            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Nivel</div>
-            <div className="space-y-1">
-              {levels.map(level => (
-                <button
-                  key={level}
-                  onClick={() => setLevelFilter(level)}
-                  className={`w-full text-left text-sm px-3 py-1.5 rounded-lg transition-colors ${
-                    levelFilter === level
-                      ? 'bg-indigo-50 text-indigo-700 font-medium'
-                      : 'text-gray-600 hover:bg-gray-50'
-                  }`}
-                >
-                  {level === 'Todos' ? 'Todos' : <LevelBadge level={level} size="sm" />}
-                </button>
-              ))}
-            </div>
-          </div>
+            <div className="h-px bg-gray-100" />
 
-          <div>
-            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Plataforma</div>
-            <div className="space-y-1">
-              {platforms.map(platform => (
-                <button
-                  key={platform}
-                  onClick={() => setPlatformFilter(platform)}
-                  className={`w-full text-left text-sm px-3 py-1.5 rounded-lg transition-colors ${
-                    platformFilter === platform
-                      ? 'bg-indigo-50 text-indigo-700 font-medium'
-                      : 'text-gray-600 hover:bg-gray-50'
-                  }`}
-                >
-                  {platform}
-                </button>
-              ))}
-            </div>
+            <FilterGroup title="Nivel">
+              <div className="flex flex-wrap gap-2">
+                {levels.map(level => (
+                  <FilterChip
+                    key={level}
+                    label={level === 'Todos' ? 'Todos' : <LevelBadge level={level} size="sm" />}
+                    selected={levelFilter.has(level)}
+                    visualSelected={isVisuallySelected(levelFilter, level, level === 'Todos')}
+                    onChange={() => toggleLevelFilter(level)}
+                    variant={level === 'Todos' ? 'default' : 'badge'}
+                  />
+                ))}
+              </div>
+            </FilterGroup>
+
+            <div className="h-px bg-gray-100" />
+
+            <FilterGroup title="Plataforma">
+              <div className="flex flex-wrap gap-2">
+                {platforms.map(platform => (
+                  <FilterChip
+                    key={platform}
+                    label={platform}
+                    selected={platformFilter.has(platform)}
+                    visualSelected={isVisuallySelected(platformFilter, platform, platform === 'Todos')}
+                    onChange={() => togglePlatformFilter(platform)}
+                  />
+                ))}
+              </div>
+            </FilterGroup>
           </div>
         </div>
 
