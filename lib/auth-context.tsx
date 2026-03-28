@@ -30,6 +30,7 @@ interface AuthContextType {
   currentUser: AuthUser | null
   isLoading: boolean
   session: Session | null
+  authError: string | null
   login: (email: string, password: string) => Promise<{ success: boolean; role?: UserRole; error?: string }>
   logout: (redirectTo?: string) => Promise<void>
   signup: (data: SignupData) => Promise<{ success: boolean; error?: string }>
@@ -73,6 +74,52 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null)
   const [session, setSession] = useState<Session | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [authError, setAuthError] = useState<string | null>(null)
+
+  const resolveSessionUser = async (activeSession: Session | null) => {
+    setSession(activeSession)
+
+    if (!activeSession?.user) {
+      setCurrentUser(null)
+      setAuthError(null)
+      return
+    }
+
+    try {
+      const roleHint = activeSession.user.user_metadata?.role
+      let userData = await fetchAuthUserDataWithRoleHint(activeSession.user.id, roleHint)
+
+      if (!userData) {
+        const repaired = await ensureRoleProfile({
+          id: activeSession.user.id,
+          email: activeSession.user.email,
+          role: roleHint,
+          username: activeSession.user.user_metadata?.username,
+          companyName: activeSession.user.user_metadata?.companyName,
+          industry: activeSession.user.user_metadata?.industry,
+        })
+
+        if (repaired) {
+          userData = await fetchAuthUserDataWithRoleHint(activeSession.user.id, roleHint)
+        }
+      }
+
+      if (!userData) {
+        setCurrentUser(null)
+        setAuthError(
+          'Hay una sesión válida en Supabase, pero no existe un perfil usable en la base. Revisá que Vercel apunte al proyecto correcto y que la migración supabase/migrations/202611010001_auth_profile_bootstrap.sql esté aplicada.'
+        )
+        return
+      }
+
+      setCurrentUser(userData)
+      setAuthError(null)
+    } catch (err) {
+      setCurrentUser(null)
+      setAuthError(err instanceof Error ? err.message : 'No se pudo cargar la sesión actual')
+      throw err
+    }
+  }
 
   useEffect(() => {
     // Safety timeout to prevent infinite loading
@@ -84,31 +131,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Get initial session
     getAuthSession()
       .then(async ({ data: { session } }) => {
-        setSession(session)
-        if (session?.user) {
-          const roleHint = session.user.user_metadata?.role
-          let userData = await fetchAuthUserDataWithRoleHint(session.user.id, roleHint)
-
-          if (!userData) {
-            try {
-              const repaired = await ensureRoleProfile({
-                id: session.user.id,
-                email: session.user.email,
-                role: roleHint,
-                username: session.user.user_metadata?.username,
-                companyName: session.user.user_metadata?.companyName,
-                industry: session.user.user_metadata?.industry,
-              })
-              if (repaired) {
-                userData = await fetchAuthUserDataWithRoleHint(session.user.id, roleHint)
-              }
-            } catch (err) {
-              console.error('Error repairing missing profile on session restore:', err)
-            }
-          }
-
-          setCurrentUser(userData)
-        }
+        await resolveSessionUser(session)
       })
       .catch((err) => {
         console.error('Error loading auth session:', err)
@@ -120,32 +143,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Listen for auth changes
     const { data: { subscription } } = onAuthStateChanged(async (_event, session) => {
-      setSession(session)
-      if (session?.user) {
-        const roleHint = session.user.user_metadata?.role
-        let userData = await fetchAuthUserDataWithRoleHint(session.user.id, roleHint)
-
-        if (!userData) {
-          try {
-            const repaired = await ensureRoleProfile({
-              id: session.user.id,
-              email: session.user.email,
-              role: roleHint,
-              username: session.user.user_metadata?.username,
-              companyName: session.user.user_metadata?.companyName,
-              industry: session.user.user_metadata?.industry,
-            })
-            if (repaired) {
-              userData = await fetchAuthUserDataWithRoleHint(session.user.id, roleHint)
-            }
-          } catch (err) {
-            console.error('Error repairing missing profile on auth change:', err)
-          }
-        }
-
-        setCurrentUser(userData)
-      } else {
-        setCurrentUser(null)
+      try {
+        await resolveSessionUser(session)
+      } catch (err) {
+        console.error('Error loading auth state change:', err)
       }
     })
 
@@ -153,6 +154,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const login = async (email: string, password: string): Promise<{ success: boolean; role?: UserRole; error?: string }> => {
+    setAuthError(null)
     const { data, error } = await signInWithPassword(email, password)
     if (error) return { success: false, error: error.message }
     if (!data.user) return { success: false, error: 'No se pudo iniciar sesión' }
@@ -186,6 +188,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     }
     setCurrentUser(userData)
+    setAuthError(null)
     return { success: true, role: userData.role }
   }
 
@@ -198,6 +201,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Always clear in-memory and client-side state, even if remote sign-out fails.
       setCurrentUser(null)
       setSession(null)
+      setAuthError(null)
       clearClientAuthArtifacts()
 
       if (typeof window !== 'undefined' && window.location.pathname !== redirectTo) {
@@ -285,7 +289,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ currentUser, isLoading, session, login, logout, signup, updateProfile }}>
+    <AuthContext.Provider value={{ currentUser, isLoading, session, authError, login, logout, signup, updateProfile }}>
       {children}
     </AuthContext.Provider>
   )

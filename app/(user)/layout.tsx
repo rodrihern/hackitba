@@ -7,6 +7,7 @@ import { useAuth } from '@/lib/auth-context'
 import Navbar from '@/components/Navbar'
 import type { UserProfile } from '@/lib/types'
 import LevelBadge from '@/components/LevelBadge'
+import AuthRecoveryScreen from '@/components/AuthRecoveryScreen'
 
 const navItems = [
   { href: '/home', label: 'Home', icon: '🏠' },
@@ -18,7 +19,7 @@ const navItems = [
 ]
 
 export default function UserLayout({ children }: { children: React.ReactNode }) {
-  const { currentUser, isLoading, session, logout } = useAuth()
+  const { currentUser, isLoading, session, authError, logout } = useAuth()
   const pathname = usePathname()
 
   const handleLogout = async () => {
@@ -38,6 +39,10 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
   }, [session, isLoading])
 
   if (isLoading || (session && (!currentUser || currentUser.role !== 'user'))) {
+    if (!isLoading && authError) {
+      return <AuthRecoveryScreen message={authError} onReset={() => logout('/login')} />
+    }
+
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />

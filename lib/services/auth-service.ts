@@ -125,11 +125,15 @@ function isValidRole(value: unknown): value is UserRole {
 }
 
 async function fetchUserProfileByUserId(userId: string): Promise<UserProfile | null> {
-    const { data: userProfile } = await supabase
+    const { data: userProfile, error } = await supabase
       .from('user_profiles')
       .select('*')
       .eq('user_id', userId)
       .maybeSingle()
+
+    if (error) {
+      throw new Error(`Supabase user_profiles query failed: ${error.message}`)
+    }
 
     if (!userProfile) return null
 
@@ -154,11 +158,15 @@ async function fetchUserProfileByUserId(userId: string): Promise<UserProfile | n
 }
 
 async function fetchBrandProfileByUserId(userId: string): Promise<BrandProfile | null> {
-  const { data: brandProfile } = await supabase
+  const { data: brandProfile, error } = await supabase
     .from('brand_profiles')
     .select('*')
     .eq('user_id', userId)
     .maybeSingle()
+
+  if (error) {
+    throw new Error(`Supabase brand_profiles query failed: ${error.message}`)
+  }
 
   if (!brandProfile) return null
 
@@ -187,11 +195,15 @@ export async function fetchAuthUserDataWithRoleHint(userId: string, roleHint?: u
   }
 
   // Fallback: try profiles table first (if allowed), then probe domain profile tables.
-  const { data: profileFromTable } = await supabase
+  const { data: profileFromTable, error: profileError } = await supabase
     .from('profiles')
     .select('role')
     .eq('id', userId)
     .maybeSingle()
+
+  if (profileError) {
+    throw new Error(`Supabase profiles query failed: ${profileError.message}`)
+  }
 
   if (profileFromTable?.role === 'user') {
     const profile = await fetchUserProfileByUserId(userId)

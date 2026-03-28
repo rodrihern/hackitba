@@ -4,9 +4,10 @@ import { useEffect } from 'react'
 import Link from 'next/link'
 import { ArrowLeftRight, Trophy, Star } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
+import AuthRecoveryScreen from '@/components/AuthRecoveryScreen'
 
 export default function Home() {
-  const { currentUser, isLoading, session } = useAuth()
+  const { currentUser, isLoading, session, authError, logout } = useAuth()
 
   useEffect(() => {
     if (isLoading || !currentUser || typeof window === 'undefined') return
@@ -27,6 +28,10 @@ export default function Home() {
   }
 
   if (session && !currentUser) {
+    if (authError) {
+      return <AuthRecoveryScreen message={authError} onReset={() => logout('/login')} />
+    }
+
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
         <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />

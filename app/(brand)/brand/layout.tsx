@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/lib/auth-context'
 import type { BrandProfile } from '@/lib/types'
+import AuthRecoveryScreen from '@/components/AuthRecoveryScreen'
 
 const navItems = [
   { href: '/brand/dashboard', label: 'Dashboard' },
@@ -14,7 +15,7 @@ const navItems = [
 ]
 
 export default function BrandLayout({ children }: { children: React.ReactNode }) {
-  const { currentUser, isLoading, session, logout } = useAuth()
+  const { currentUser, isLoading, session, authError, logout } = useAuth()
   const pathname = usePathname()
   const [failedLogoSrc, setFailedLogoSrc] = useState<string | null>(null)
 
@@ -35,6 +36,10 @@ export default function BrandLayout({ children }: { children: React.ReactNode })
   const rawLogo = (currentUser?.profile as BrandProfile | undefined)?.logo?.trim() ?? ''
 
   if (isLoading || (session && (!currentUser || currentUser.role !== 'brand'))) {
+    if (!isLoading && authError) {
+      return <AuthRecoveryScreen message={authError} onReset={() => logout('/login')} />
+    }
+
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
