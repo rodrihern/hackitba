@@ -159,7 +159,7 @@ export default function BrandStorePage() {
     <div className="p-8 max-w-5xl mx-auto">
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-1">Tienda de Recompensas</h1>
+          <h1 className="text-2xl font-bold text-gray-900 mb-1">Mi Tienda</h1>
           <p className="text-gray-500">Configurá los premios que los creadores pueden canjear con sus puntos</p>
         </div>
         <button

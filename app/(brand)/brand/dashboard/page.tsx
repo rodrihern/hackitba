@@ -80,7 +80,7 @@ export default function BrandDashboardPage() {
           <h2 className="font-bold text-gray-900 mb-4">Acciones rápidas</h2>
           <div className="space-y-3">
             <Link
-              href="/brand/campaigns/create"
+              href="/brand/campaigns/create?type=exchange"
               className="flex items-center gap-3 p-4 rounded-xl bg-indigo-50 hover:bg-indigo-100 transition-colors group"
             >
               <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white text-lg group-hover:scale-105 transition-transform">
@@ -96,7 +96,7 @@ export default function BrandDashboardPage() {
             </Link>
 
             <Link
-              href="/brand/campaigns/create"
+              href="/brand/campaigns/create?type=challenge"
               className="flex items-center gap-3 p-4 rounded-xl bg-orange-50 hover:bg-orange-100 transition-colors group"
             >
               <div className="w-10 h-10 bg-orange-500 rounded-xl flex items-center justify-center text-white text-lg group-hover:scale-105 transition-transform">
@@ -119,8 +119,8 @@ export default function BrandDashboardPage() {
                 👤
               </div>
               <div>
-                <div className="font-semibold text-gray-900">Buscar Creadores</div>
-                <div className="text-sm text-gray-500">Explorar el marketplace</div>
+                <div className="font-semibold text-gray-900">Influencers</div>
+                <div className="text-sm text-gray-500">Explorá perfiles para tus campañas</div>
               </div>
               <svg className="ml-auto w-5 h-5 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
