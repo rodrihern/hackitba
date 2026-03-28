@@ -39,11 +39,12 @@ interface CreateCampaignInput {
     isMultiDay: boolean
     hasLeaderboard: boolean
     maxWinners: string
+    deadline: string
     days: ChallengeDayInput[]
   }
 }
 
-const DEFAULT_TIMEOUT_MS = 12000
+const DEFAULT_TIMEOUT_MS = 30000
 
 function getDefaultExchangeQuestions(input: CreateCampaignInput['exchange']): ExchangeFormQuestionInput[] {
   const requirementPrompt = input?.requirementsBrief?.trim()
@@ -165,6 +166,7 @@ export async function createCampaign(input: CreateCampaignInput): Promise<string
           total_days: input.challenge.days.length,
           has_leaderboard: input.challenge.hasLeaderboard,
           max_winners: parseInt(input.challenge.maxWinners, 10),
+          deadline: input.challenge.deadline || null,
         })
         .select()
         .single()

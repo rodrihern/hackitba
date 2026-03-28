@@ -84,6 +84,7 @@ export function mapCampaign(row: Record<string, unknown>): Campaign {
     totalDays: (challengeRow.total_days as number) || 1,
     hasLeaderboard: (challengeRow.has_leaderboard as boolean) || true,
     maxWinners: (challengeRow.max_winners as number) || 1,
+    deadline: (challengeRow.deadline as string) || undefined,
     days: ((challengeRow.challenge_days as Record<string, unknown>[]) || []).map(d => ({
       id: d.id as string,
       challengeId: d.challenge_id as string,

@@ -13,7 +13,7 @@ type Step = 1 | 2 | 3
 interface ChallengeDay {
   title: string
   description: string
-  contentType: ContentType
+  contentType: ContentType | ''
   instructions: string
 }
 
@@ -34,6 +34,14 @@ function createQuestionDraft(overrides: Partial<ExchangeQuestionDraft> = {}): Ex
     options: '',
     ...overrides,
   }
+}
+
+function isFilled(value: string) {
+  return value.trim().length > 0
+}
+
+function isContentType(value: ContentType | ''): value is ContentType {
+  return value === 'image' || value === 'video' || value === 'text' || value === 'link'
 }
 
 export default function CreateCampaignPage() {
@@ -66,8 +74,9 @@ export default function CreateCampaignPage() {
   const [isMultiDay, setIsMultiDay] = useState(false)
   const [hasLeaderboard, setHasLeaderboard] = useState(true)
   const [maxWinners, setMaxWinners] = useState('3')
+  const [challengeDeadline, setChallengeDeadline] = useState('')
   const [days, setDays] = useState<ChallengeDay[]>([
-    { title: '', description: '', contentType: 'image', instructions: '' }
+    { title: '', description: '', contentType: '', instructions: '' }
   ])
 
   const [publishing, setPublishing] = useState(false)
@@ -75,7 +84,7 @@ export default function CreateCampaignPage() {
   const [publishAction, setPublishAction] = useState<'draft' | 'active' | null>(null)
 
   const addDay = () => {
-    setDays(prev => [...prev, { title: '', description: '', contentType: 'image', instructions: '' }])
+    setDays(prev => [...prev, { title: '', description: '', contentType: '', instructions: '' }])
   }
 
   const addApplicationQuestion = () => {
@@ -102,11 +111,37 @@ export default function CreateCampaignPage() {
     }
   }
 
+  const challengeTasksAreValid = campaignType !== 'challenge' || days.every(day => (
+    isFilled(day.title) && isContentType(day.contentType) && isFilled(day.instructions)
+  ))
+
+  const canContinueToPublish = isFilled(title) && isFilled(description) && challengeTasksAreValid
+
   const handleSubmit = async (status: 'draft' | 'active') => {
     if (!brand?.id || !campaignType) {
       setPublishError('No se pudo detectar la marca o el tipo de campaña')
       return
     }
+
+    if (!isFilled(title) || !isFilled(description)) {
+      setPublishError('Completá el título y la descripción de la campaña')
+      return
+    }
+
+    if (campaignType === 'challenge' && !challengeTasksAreValid) {
+      setPublishError('Completá el título, el entregable y las instrucciones de cada tarea del reto')
+      return
+    }
+
+    const normalizedChallengeDays = campaignType === 'challenge'
+      ? days.map(day => ({
+          ...day,
+          title: day.title.trim(),
+          description: day.description.trim(),
+          instructions: day.instructions.trim(),
+          contentType: day.contentType as ContentType,
+        }))
+      : []
 
     setPublishing(true)
     setPublishAction(status)
@@ -141,7 +176,8 @@ export default function CreateCampaignPage() {
           isMultiDay,
           hasLeaderboard,
           maxWinners,
-          days,
+          deadline: challengeDeadline,
+          days: normalizedChallengeDays,
         },
       })
 
@@ -457,15 +493,26 @@ export default function CreateCampaignPage() {
                 </button>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Cantidad de ganadores</label>
-                <input
-                  type="number"
-                  value={maxWinners}
-                  onChange={(e) => setMaxWinners(e.target.value)}
-                  min={1}
-                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Cantidad de ganadores</label>
+                  <input
+                    type="number"
+                    value={maxWinners}
+                    onChange={(e) => setMaxWinners(e.target.value)}
+                    min={1}
+                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Deadline</label>
+                  <input
+                    type="date"
+                    value={challengeDeadline}
+                    onChange={(e) => setChallengeDeadline(e.target.value)}
+                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
               </div>
 
               {/* Days */}
@@ -500,34 +547,54 @@ export default function CreateCampaignPage() {
                         )}
                       </div>
                       <div className="space-y-3">
-                        <input
-                          type="text"
-                          value={day.title}
-                          onChange={(e) => updateDay(idx, 'title', e.target.value)}
-                          placeholder="Título"
-                          className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                        />
-                        <select
-                          value={day.contentType}
-                          onChange={(e) => updateDay(idx, 'contentType', e.target.value)}
-                          className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                        >
-                          <option value="image">Imagen</option>
-                          <option value="video">Video</option>
-                          <option value="text">Texto</option>
-                          <option value="link">Link</option>
-                        </select>
-                        <textarea
-                          value={day.instructions}
-                          onChange={(e) => updateDay(idx, 'instructions', e.target.value)}
-                          placeholder="Instrucciones..."
-                          rows={2}
-                          className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
-                        />
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Título *</label>
+                          <input
+                            type="text"
+                            value={day.title}
+                            onChange={(e) => updateDay(idx, 'title', e.target.value)}
+                            placeholder="Título"
+                            required
+                            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Entregable *</label>
+                          <select
+                            value={day.contentType}
+                            onChange={(e) => updateDay(idx, 'contentType', e.target.value)}
+                            required
+                            className={`w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
+                              day.contentType ? 'text-gray-900' : 'text-gray-400'
+                            }`}
+                          >
+                            <option value="" disabled>Entregable</option>
+                            <option value="image">Imagen</option>
+                            <option value="video">Video</option>
+                            <option value="text">Texto</option>
+                            <option value="link">Link</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Instrucciones *</label>
+                          <textarea
+                            value={day.instructions}
+                            onChange={(e) => updateDay(idx, 'instructions', e.target.value)}
+                            placeholder="Instrucciones..."
+                            rows={2}
+                            required
+                            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+                          />
+                        </div>
                       </div>
                     </div>
                   ))}
                 </div>
+                {campaignType === 'challenge' && !challengeTasksAreValid && (
+                  <p className="mt-2 text-sm text-orange-600">
+                    Completá el título, el entregable y las instrucciones de cada tarea para continuar.
+                  </p>
+                )}
               </div>
             </>
           )}
@@ -540,8 +607,8 @@ export default function CreateCampaignPage() {
               ← Atrás
             </button>
             <button
-              onClick={() => title && description && setStep(3)}
-              disabled={!title || !description}
+              onClick={() => canContinueToPublish && setStep(3)}
+              disabled={!canContinueToPublish}
               className="bg-indigo-600 text-white font-semibold px-6 py-2.5 rounded-xl hover:bg-indigo-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed text-sm"
             >
               Continuar →
@@ -601,6 +668,7 @@ export default function CreateCampaignPage() {
                   {hasLeaderboard && <span className="text-xs bg-yellow-50 text-yellow-700 px-2 py-0.5 rounded-full font-medium">🏆 Leaderboard</span>}
                   {isMultiDay && <span className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full font-medium">{days.length} días</span>}
                   <span className="text-xs bg-violet-50 text-violet-700 px-2 py-0.5 rounded-full font-medium">{maxWinners} ganadores</span>
+                  {challengeDeadline && <span className="text-xs bg-gray-100 text-gray-700 px-2 py-0.5 rounded-full font-medium">Hasta {challengeDeadline}</span>}
                 </div>
               </div>
             )}
