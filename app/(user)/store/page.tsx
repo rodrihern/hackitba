@@ -135,6 +135,7 @@ export default function StorePage() {
         </button>
         {brands.map(brand => {
           const brandPts = brandPoints.find(bp => bp.brand_id === brand.id)
+          const brandLogo = brand.logo?.trim()
           return (
             <button
               key={brand.id}
@@ -146,8 +147,19 @@ export default function StorePage() {
               }`}
             >
               <div className="w-5 h-5 rounded bg-white/20 flex items-center justify-center overflow-hidden">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={brand.logo} alt="" className="w-4 h-4 object-contain" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
+                {brandLogo ? (
+                  <>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={brandLogo}
+                      alt=""
+                      className="w-4 h-4 object-contain"
+                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+                    />
+                  </>
+                ) : (
+                  <span className="text-[10px] font-semibold">{brand.name.charAt(0).toUpperCase()}</span>
+                )}
               </div>
               {brand.name}
               {brandPts && (

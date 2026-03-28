@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter, usePathname } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/lib/auth-context'
 import Navbar from '@/components/Navbar'
@@ -17,15 +17,18 @@ const navItems = [
 
 export default function BrandLayout({ children }: { children: React.ReactNode }) {
   const { currentUser, isLoading, logout } = useAuth()
-  const router = useRouter()
   const pathname = usePathname()
   const [failedLogoSrc, setFailedLogoSrc] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!isLoading && (!currentUser || currentUser.role !== 'brand')) {
-      router.replace('/')
+    if (isLoading || typeof window === 'undefined') return
+
+    if (!currentUser || currentUser.role !== 'brand') {
+      if (window.location.pathname !== '/') {
+        window.location.replace('/')
+      }
     }
-  }, [currentUser, isLoading, router])
+  }, [currentUser, isLoading])
 
   const rawLogo = (currentUser?.profile as BrandProfile | undefined)?.logo?.trim() ?? ''
 

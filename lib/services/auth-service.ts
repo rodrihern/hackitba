@@ -122,7 +122,7 @@ async function fetchUserProfileByUserId(userId: string): Promise<UserProfile | n
       .from('user_profiles')
       .select('*')
       .eq('user_id', userId)
-      .single()
+      .maybeSingle()
 
     if (!userProfile) return null
 
@@ -151,7 +151,7 @@ async function fetchBrandProfileByUserId(userId: string): Promise<BrandProfile |
     .from('brand_profiles')
     .select('*')
     .eq('user_id', userId)
-    .single()
+    .maybeSingle()
 
   if (!brandProfile) return null
 

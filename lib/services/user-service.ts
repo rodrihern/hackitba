@@ -1,4 +1,5 @@
 import { mapCampaign, mapExchangeApplicationAnswer } from '@/lib/mappers'
+import { retryOnTransientFetch } from '@/lib/retry'
 import { supabase } from '@/lib/supabase'
 import type {
   ApplicationStatus,
@@ -127,60 +128,66 @@ async function augmentCampaignsWithExchangeStats(
 }
 
 export async function fetchAllCampaigns(userProfileId?: string): Promise<Campaign[]> {
-  const { data, error } = await supabase
-    .from('campaigns')
-    .select(`
-      *,
-      brand_profiles (id, name, logo),
-      exchanges (
+  return retryOnTransientFetch(async () => {
+    const { data, error } = await supabase
+      .from('campaigns')
+      .select(`
         *,
-        exchange_form_questions (*)
-      ),
-      challenges (*, challenge_days (*))
-    `)
-    .order('created_at', { ascending: false })
+        brand_profiles (id, name, logo),
+        exchanges (
+          *,
+          exchange_form_questions (*)
+        ),
+        challenges (*, challenge_days (*))
+      `)
+      .order('created_at', { ascending: false })
 
-  if (error) throw new Error(error.message)
-  return augmentCampaignsWithExchangeStats((data || []) as Record<string, unknown>[], userProfileId)
+    if (error) throw new Error(error.message)
+    return augmentCampaignsWithExchangeStats((data || []) as Record<string, unknown>[], userProfileId)
+  })
 }
 
 export async function fetchActiveCampaigns(userProfileId?: string): Promise<Campaign[]> {
-  const { data, error } = await supabase
-    .from('campaigns')
-    .select(`
-      *,
-      brand_profiles (id, name, logo),
-      exchanges (
+  return retryOnTransientFetch(async () => {
+    const { data, error } = await supabase
+      .from('campaigns')
+      .select(`
         *,
-        exchange_form_questions (*)
-      ),
-      challenges (*, challenge_days (*))
-    `)
-    .eq('status', 'active')
-    .order('created_at', { ascending: false })
+        brand_profiles (id, name, logo),
+        exchanges (
+          *,
+          exchange_form_questions (*)
+        ),
+        challenges (*, challenge_days (*))
+      `)
+      .eq('status', 'active')
+      .order('created_at', { ascending: false })
 
-  if (error) throw new Error(error.message)
-  return augmentCampaignsWithExchangeStats((data || []) as Record<string, unknown>[], userProfileId)
+    if (error) throw new Error(error.message)
+    return augmentCampaignsWithExchangeStats((data || []) as Record<string, unknown>[], userProfileId)
+  })
 }
 
 export async function fetchExchangeFormQuestions(exchangeId: string): Promise<ExchangeFormQuestion[]> {
-  const { data, error } = await supabase
-    .from('exchange_form_questions')
-    .select('*')
-    .eq('exchange_id', exchangeId)
-    .order('position', { ascending: true })
+  return retryOnTransientFetch(async () => {
+    const { data, error } = await supabase
+      .from('exchange_form_questions')
+      .select('*')
+      .eq('exchange_id', exchangeId)
+      .order('position', { ascending: true })
 
-  if (error) throw new Error(error.message)
+    if (error) throw new Error(error.message)
 
-  return ((data || []) as Record<string, unknown>[]).map(row => ({
-    id: row.id as string,
-    exchangeId: row.exchange_id as string,
-    label: row.label as string,
-    fieldType: row.field_type as ExchangeFormQuestion['fieldType'],
-    required: Boolean(row.required),
-    position: (row.position as number) || 0,
-    options: Array.isArray(row.options) ? row.options.map(option => String(option)) : [],
-  }))
+    return ((data || []) as Record<string, unknown>[]).map(row => ({
+      id: row.id as string,
+      exchangeId: row.exchange_id as string,
+      label: row.label as string,
+      fieldType: row.field_type as ExchangeFormQuestion['fieldType'],
+      required: Boolean(row.required),
+      position: (row.position as number) || 0,
+      options: Array.isArray(row.options) ? row.options.map(option => String(option)) : [],
+    }))
+  })
 }
 
 export async function createExchangeApplication(input: {
@@ -245,47 +252,49 @@ export async function fetchUserCampaignsData(userProfileId: string): Promise<{
   applications: Array<UserCampaignApplicationRow & { answers: ExchangeApplicationAnswer[] }>
   challengeSubs: UserChallengeSubmissionRow[]
 }> {
-  const [appsResult, subsResult] = await Promise.all([
-    supabase
-      .from('exchange_applications')
-      .select(`
-        *,
-        exchange_application_answers (
+  return retryOnTransientFetch(async () => {
+    const [appsResult, subsResult] = await Promise.all([
+      supabase
+        .from('exchange_applications')
+        .select(`
           *,
-          exchange_form_questions (*)
+          exchange_application_answers (
+            *,
+            exchange_form_questions (*)
+          ),
+          exchanges (
+            *,
+            campaigns (*, brand_profiles (name, logo))
+          )
+        `)
+        .eq('user_id', userProfileId)
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('challenge_submissions')
+        .select(`
+          *,
+          challenges (
+            *,
+            campaigns (*, brand_profiles (name, logo)),
+            challenge_days (*)
+          )
+        `)
+        .eq('user_id', userProfileId),
+    ])
+
+    if (appsResult.error) throw new Error(appsResult.error.message)
+    if (subsResult.error) throw new Error(subsResult.error.message)
+
+    return {
+      applications: ((appsResult.data || []) as UserCampaignApplicationRow[]).map(application => ({
+        ...application,
+        answers: mapApplicationAnswers(
+          (application.exchange_application_answers || []) as Array<Record<string, unknown>>
         ),
-        exchanges (
-          *,
-          campaigns (*, brand_profiles (name, logo))
-        )
-      `)
-      .eq('user_id', userProfileId)
-      .order('created_at', { ascending: false }),
-    supabase
-      .from('challenge_submissions')
-      .select(`
-        *,
-        challenges (
-          *,
-          campaigns (*, brand_profiles (name, logo)),
-          challenge_days (*)
-        )
-      `)
-      .eq('user_id', userProfileId),
-  ])
-
-  if (appsResult.error) throw new Error(appsResult.error.message)
-  if (subsResult.error) throw new Error(subsResult.error.message)
-
-  return {
-    applications: ((appsResult.data || []) as UserCampaignApplicationRow[]).map(application => ({
-      ...application,
-      answers: mapApplicationAnswers(
-        (application.exchange_application_answers || []) as Array<Record<string, unknown>>
-      ),
-    })),
-    challengeSubs: (subsResult.data || []) as unknown as UserChallengeSubmissionRow[],
-  }
+      })),
+      challengeSubs: (subsResult.data || []) as unknown as UserChallengeSubmissionRow[],
+    }
+  })
 }
 
 export async function fetchUserStoreData(userProfileId: string): Promise<{
