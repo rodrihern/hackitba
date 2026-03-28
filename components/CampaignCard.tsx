@@ -29,6 +29,7 @@ export default function CampaignCard({ campaign, href, onApply, showBrand = true
     : false
   const currentStatus = campaign.currentUserApplicationStatus
   const applyDisabled = Boolean(currentStatus) || exchangeFull
+  const isAccepted = currentStatus === 'accepted'
   const primaryLabel = currentStatus
     ? currentStatus === 'accepted'
       ? 'Aceptada'
@@ -143,11 +144,24 @@ export default function CampaignCard({ campaign, href, onApply, showBrand = true
 
         {/* CTA */}
         <div className="mt-4 flex gap-2">
-          {isExchange && onApply ? (
+          {isExchange && onApply && isAccepted ? (
+            <div className="flex-1 rounded-xl border border-green-200 bg-green-50 px-4 py-2.5 text-sm font-semibold text-green-700">
+              <div className="flex items-center justify-center gap-2">
+                <span aria-hidden="true">✓</span>
+                <span>Colaboración aceptada</span>
+              </div>
+            </div>
+          ) : isExchange && onApply ? (
             <button
               onClick={onApply}
               disabled={applyDisabled}
-              className="flex-1 bg-indigo-600 text-white text-sm font-semibold py-2.5 rounded-xl hover:bg-indigo-700 transition-colors disabled:cursor-not-allowed disabled:bg-indigo-200"
+              className={`flex-1 text-sm font-semibold py-2.5 rounded-xl transition-colors disabled:cursor-not-allowed ${
+                currentStatus === 'rejected'
+                  ? 'bg-red-100 text-red-700 disabled:bg-red-100'
+                  : currentStatus === 'applied' || currentStatus === 'invited'
+                  ? 'bg-gray-100 text-gray-500 disabled:bg-gray-100'
+                  : 'bg-indigo-600 text-white hover:bg-indigo-700 disabled:bg-indigo-200'
+              }`}
             >
               {primaryLabel}
             </button>

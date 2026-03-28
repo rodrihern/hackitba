@@ -148,18 +148,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const logout = async () => {
-    // Clear local auth state immediately so UI reacts even if network sign-out fails.
-    setCurrentUser(null)
-    setSession(null)
-
     try {
       await signOutAuth()
-    } catch (err) {
-      console.error('Error during sign out:', err)
-    } finally {
+
+      // Keep local state aligned with the real Supabase session state.
+      setCurrentUser(null)
+      setSession(null)
+
       if (typeof window !== 'undefined' && window.location.pathname !== '/') {
         window.location.assign('/')
       }
+    } catch (err) {
+      console.error('Error during sign out:', err)
     }
   }
 
