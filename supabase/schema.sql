@@ -531,6 +531,20 @@ alter table notifications enable row level security;
 create policy "profiles: ver propio" on profiles
   for select using (auth.uid() = id);
 
+create policy "profiles: marca ve applicants" on profiles
+  for select using (
+    exists (
+      select 1
+      from user_profiles up
+      join exchange_applications ea on ea.user_id = up.id
+      join exchanges e on e.id = ea.exchange_id
+      join campaigns c on c.id = e.campaign_id
+      join brand_profiles bp on bp.id = c.brand_id
+      where up.user_id = profiles.id
+        and bp.user_id = auth.uid()
+    )
+  );
+
 -- user_profiles: público para leer, solo el dueño edita
 create policy "user_profiles: lectura pública" on user_profiles
   for select using (true);

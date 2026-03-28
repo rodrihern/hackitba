@@ -248,6 +248,7 @@ export default function CampaignDetailPage() {
                 const currentStatus = applicationStatuses[app.id] || app.status
                 const userProfile = app.user_profiles ? mapUserProfile(app.user_profiles) : null
                 if (!userProfile) return null
+                const isTerminalStatus = currentStatus === 'accepted' || currentStatus === 'rejected'
 
                 return (
                   <div key={app.id} className="border border-gray-100 rounded-xl p-4">
@@ -264,6 +265,11 @@ export default function CampaignDetailPage() {
                           <div className="text-xs text-gray-400">
                             {userProfile.level} · {userProfile.category} · {formatDate(app.created_at)}
                           </div>
+                          {userProfile.email && (
+                            <div className="text-xs text-gray-500 mt-1">
+                              {userProfile.email}
+                            </div>
+                          )}
                         </div>
                       </div>
                       <span className={`text-xs font-semibold px-3 py-1 rounded-full ${statusColors[currentStatus]}`}>
@@ -292,22 +298,32 @@ export default function CampaignDetailPage() {
                       </div>
                     )}
 
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => updateStatus(app.id, 'accepted')}
-                        disabled={currentStatus === 'accepted'}
-                        className="flex-1 text-sm bg-green-50 text-green-700 font-medium py-2 rounded-xl hover:bg-green-100 transition-colors disabled:opacity-40"
-                      >
-                        ✅ Aceptar
-                      </button>
-                      <button
-                        onClick={() => updateStatus(app.id, 'rejected')}
-                        disabled={currentStatus === 'rejected'}
-                        className="flex-1 text-sm bg-red-50 text-red-600 font-medium py-2 rounded-xl hover:bg-red-100 transition-colors disabled:opacity-40"
-                      >
-                        ❌ Rechazar
-                      </button>
-                    </div>
+                    {isTerminalStatus ? (
+                      <div className={`rounded-xl px-4 py-3 text-sm font-medium ${
+                        currentStatus === 'accepted'
+                          ? 'bg-green-50 text-green-700'
+                          : 'bg-red-50 text-red-700'
+                      }`}>
+                        {currentStatus === 'accepted'
+                          ? 'Ya aceptaste esta aplicación. Podés contactar a la creadora por email.'
+                          : 'Ya rechazaste esta aplicación.'}
+                      </div>
+                    ) : (
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => updateStatus(app.id, 'accepted')}
+                          className="flex-1 text-sm bg-green-50 text-green-700 font-medium py-2 rounded-xl hover:bg-green-100 transition-colors"
+                        >
+                          ✅ Aceptar
+                        </button>
+                        <button
+                          onClick={() => updateStatus(app.id, 'rejected')}
+                          className="flex-1 text-sm bg-red-50 text-red-600 font-medium py-2 rounded-xl hover:bg-red-100 transition-colors"
+                        >
+                          ❌ Rechazar
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )
               })}

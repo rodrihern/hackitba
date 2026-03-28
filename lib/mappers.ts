@@ -18,9 +18,12 @@ function takeRelation<T>(value: unknown): T | null {
 }
 
 export function mapUserProfile(row: Record<string, unknown>): UserProfile {
+  const baseProfile = takeRelation<Record<string, unknown>>(row.profiles)
+
   return {
     id: row.id as string,
     userId: row.user_id as string,
+    email: (baseProfile?.email as string) || '',
     username: row.username as string,
     bio: (row.bio as string) || '',
     profileImage: (row.profile_image as string) || 'https://i.pravatar.cc/150?img=30',

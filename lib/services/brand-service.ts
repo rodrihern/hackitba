@@ -181,7 +181,10 @@ export async function fetchCampaignDetail(id: string): Promise<CampaignData | nu
         exchange_form_questions (*),
         exchange_applications (
           *,
-          user_profiles (*),
+          user_profiles (
+            *,
+            profiles (email)
+          ),
           exchange_application_answers (
             *,
             exchange_form_questions (*)

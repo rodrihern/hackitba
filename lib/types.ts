@@ -10,6 +10,7 @@ export type ExchangeFormFieldType = 'short_text' | 'long_text' | 'select' | 'rad
 export interface UserProfile {
   id: string
   userId: string
+  email?: string
   username: string
   bio: string
   profileImage: string
