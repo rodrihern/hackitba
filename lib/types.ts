@@ -93,6 +93,7 @@ export interface Challenge {
   totalDays: number
   hasLeaderboard: boolean
   maxWinners: number
+  deadline?: string
   days: ChallengeDay[]
 }
 
