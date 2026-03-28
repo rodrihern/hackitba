@@ -1,115 +1,115 @@
 # Product Requirements Document (PRD)
-## Plataforma de Colaboraciones Marca-Creador
+## Brand-Creator Collaboration Platform
 
 ---
 
-## 1. Visión del Producto
+## 1. Product Vision
 
-### 1.1 Descripción General
-Plataforma web desktop-first que conecta marcas con creadores de contenido mediante un sistema integrado de colaboraciones, gamificación y recompensas. La experiencia de usuario está inspirada en plataformas como Airbnb/BigBox, priorizando cards visuales y navegación intuitiva.
+### 1.1 Overview
+A desktop-first web platform that connects brands with content creators through an integrated system of collaborations, gamification, and rewards. The user experience is inspired by platforms like Airbnb/BigBox, prioritizing visual cards and intuitive navigation.
 
-### 1.2 Propuesta de Valor
+### 1.2 Value Proposition
 
-**Para Marcas:**
-- Descubrir y conectar con creadores de contenido
-- Lanzar campañas de marketing (canjes y retos)
-- Gestionar contenido generado por usuarios
-- Construir comunidades leales mediante sistema de puntos
+**For Brands:**
+- Discover and connect with content creators
+- Launch marketing campaigns (exchanges and challenges)
+- Manage user-generated content
+- Build loyal communities through a points system
 
-**Para Usuarios/Creadores:**
-- Construir un portfolio público profesional
-- Participar en campañas de marcas
-- Ganar puntos y recompensas
-- Avanzar en sistema de niveles gamificado
+**For Users/Creators:**
+- Build a professional public portfolio
+- Participate in brand campaigns
+- Earn points and rewards
+- Advance in a gamified level system
 
 ---
 
-## 2. Arquitectura Técnica
+## 2. Technical Architecture
 
-### 2.1 Stack Tecnológico
+### 2.1 Technical Stack
 
 **Frontend:**
 - **Framework:** Next.js (App Router)
 - **UI Library:** React
-- **State Management:** Zustand o React Query
+- **State Management:** Zustand or React Query
 - **Styling:** Tailwind CSS
-- **Design Pattern:** Cards estilo Airbnb
+- **Design Pattern:** Airbnb-style cards
 
 **Backend:**
 - **BaaS:** Supabase
-  - Autenticación
-  - Base de datos PostgreSQL
-  - Storage (media opcional)
-  - Edge Functions (lógica compleja/IA)
+  - Authentication
+  - PostgreSQL database
+  - Storage (optional media)
+  - Edge Functions (complex logic/AI)
 
-**IA/ML:**
-- **Servicio:** Edge Function server-side
-- **Input:** Prompt de búsqueda de marca
-- **Output:** Lista rankeada de usuarios por relevancia
-
----
-
-## 3. Usuarios y Permisos
-
-### 3.1 Tipos de Usuario
-
-#### Marca
-**Características:**
-- Cuenta única por empresa
-- Acceso completo a funcionalidades de gestión
-
-**Capacidades:**
-- Crear campañas (canjes/retos)
-- Explorar marketplace de creadores
-- Invitar usuarios específicos
-- Puntuar entregas de contenido
-- Definir y gestionar recompensas
-- Configurar tienda de puntos
-
-#### Usuario/Creador
-**Características:**
-- Tipo único (sin diferenciación de rol)
-- Incluye: usuarios comunes, microinfluencers, influencers
-- Diferenciación mediante **sistema de niveles dinámico**
-
-**Capacidades:**
-- Construir portfolio público
-- Aplicar a campañas
-- Participar en retos
-- Acumular puntos por marca
-- Canjear recompensas
-- Seguir marcas
+**AI/ML:**
+- **Service:** Server-side Edge Function
+- **Input:** Brand search prompt
+- **Output:** Ranked list of users by relevance
 
 ---
 
-## 4. Sistema de Niveles
+## 3. Users and Permissions
 
-### 4.1 Niveles Disponibles
-- **Bronze** (0-50 puntos)
-- **Silver** (50-150 puntos)
-- **Gold** (150-300 puntos)
-- **Platinum** (300-600 puntos)
-- **Diamond** (600+ puntos)
+### 3.1 User Types
 
-### 4.2 Variables de Cálculo
-- Cantidad de canjes obtenidos
-- Cantidad de campañas completadas
-- Cantidad de puntos acumulados (global, todas las marcas)
-- Cantidad de seguidores (Instagram + TikTok)
-- Cantidad de veces seleccionado por marcas
+#### Brand
+**Characteristics:**
+- Single account per company
+- Full access to management features
 
-### 4.3 Fórmula MVP
+**Capabilities:**
+- Create campaigns (exchanges/challenges)
+- Explore creator marketplace
+- Invite specific users
+- Score content deliverables
+- Define and manage rewards
+- Configure points store
+
+#### User/Creator
+**Characteristics:**
+- Single type (no role differentiation)
+- Includes: regular users, micro-influencers, influencers
+- Differentiation through **dynamic level system**
+
+**Capabilities:**
+- Build public portfolio
+- Apply to campaigns
+- Participate in challenges
+- Accumulate points per brand
+- Redeem rewards
+- Follow brands
+
+---
+
+## 4. Level System
+
+### 4.1 Available Levels
+- **Bronze** (0-50 points)
+- **Silver** (50-150 points)
+- **Gold** (150-300 points)
+- **Platinum** (300-600 points)
+- **Diamond** (600+ points)
+
+### 4.2 Calculation Variables
+- Number of exchanges obtained
+- Number of completed campaigns
+- Total accumulated points (global, all brands)
+- Number of followers (Instagram + TikTok)
+- Number of times selected by brands
+
+### 4.3 MVP Formula
 
 ```
 score = 
-  (canjes × 5) +
-  (retos_completados × 3) +
-  (puntos_totales ÷ 100) +
-  (followers_total ÷ 1000) +
-  (veces_seleccionado × 4)
+  (exchanges × 5) +
+  (completed_challenges × 3) +
+  (total_points ÷ 100) +
+  (total_followers ÷ 1000) +
+  (times_selected × 4)
 ```
 
-**Rangos:**
+**Ranges:**
 - 0–50 → Bronze
 - 50–150 → Silver
 - 150–300 → Gold
@@ -118,7 +118,7 @@ score =
 
 ---
 
-## 5. Modelo de Datos
+## 5. Data Model
 
 ### 5.1 Users
 ```sql
@@ -169,7 +169,7 @@ score =
 - created_at
 ```
 
-### 5.5 Exchanges (Canjes)
+### 5.5 Exchanges
 ```sql
 - id (PK)
 - campaign_id (FK → Campaigns)
@@ -233,7 +233,7 @@ score =
 - user_id (FK → UserProfiles)
 - points (int)
 ```
-**Nota:** Los puntos son específicos por marca, no globales.
+**Note:** Points are brand-specific, not global.
 
 ### 5.11 Rewards
 ```sql
@@ -277,138 +277,138 @@ score =
 
 ---
 
-## 6. Flujos de Usuario Detallados
+## 6. Detailed User Flows
 
-### 6.1 Marca Crea un Canje
+### 6.1 Brand Creates an Exchange
 
-**Pasos:**
-1. Marca accede a dashboard
-2. Click en "Crear campaña"
-3. Selecciona tipo: **Canje**
-4. Completa formulario:
-   - Título
-   - Descripción
-   - Requisitos (followers, categoría, etc.) → JSON
-   - Tipo de recompensa (producto/dinero/ambos)
-   - Monto $ (si aplica)
-   - Descripción del producto
-   - Cantidad de slots disponibles
-   - Fecha límite
-5. Submit → **Estado: draft**
-6. Marca revisa y publica → **Estado: active**
+**Steps:**
+1. Brand accesses dashboard
+2. Click "Create campaign"
+3. Select type: **Exchange**
+4. Complete form:
+   - Title
+   - Description
+   - Requirements (followers, category, etc.) → JSON
+   - Reward type (product/money/both)
+   - Amount $ (if applicable)
+   - Product description
+   - Number of available slots
+   - Deadline
+5. Submit → **Status: draft**
+6. Brand reviews and publishes → **Status: active**
 
-**Resultado:** Canje visible en marketplace para usuarios.
-
----
-
-### 6.2 Usuario Aplica a Canje
-
-**Pasos:**
-1. Usuario navega listado de canjes
-2. Ve card de canje (título, marca, recompensa)
-3. Click → ver detalle completo
-4. Click "Aplicar"
-5. Completa formulario:
-   - Mensaje/propuesta personalizada
-6. Submit → **Estado: applied**
-
-**Resultado:** Aplicación registrada, marca puede revisarla.
+**Result:** Exchange visible in marketplace for users.
 
 ---
 
-### 6.3 Marca Invita Usuario Directo
+### 6.2 User Applies to Exchange
 
-**Pasos:**
-1. Marca accede a marketplace de creadores
-2. Aplica filtros (nivel, seguidores, etc.)
-3. Click en perfil de usuario
-4. Click "Invitar a canje"
-5. Selecciona campaña activa
-6. Confirma invitación
+**Steps:**
+1. User navigates exchange list
+2. Sees exchange card (title, brand, reward)
+3. Click → view full details
+4. Click "Apply"
+5. Complete form:
+   - Personal message/proposal
+6. Submit → **Status: applied**
 
-**Resultado:** Se crea registro en tabla `Invitations` con estado `pending`.
-
----
-
-### 6.4 Marca Selecciona Participantes
-
-**Pasos:**
-1. Marca accede a "Applicants" de campaña
-2. Revisa lista de aplicaciones
-3. Click en usuario → ver perfil completo
-4. Decide: **Accept** o **Reject**
-
-**Resultado:** 
-- `Accept` → estado cambia a **accepted**
-- `Reject` → estado cambia a **rejected**
+**Result:** Application registered, brand can review.
 
 ---
 
-### 6.5 Usuario Completa Canje
+### 6.3 Brand Invites User Directly
 
-**Pasos:**
-1. Usuario recibe notificación de aceptación
-2. Crea contenido (post, video, etc.)
-3. Publica en red social
-4. Regresa a plataforma → sube link de publicación
-5. Marca valida manualmente el cumplimiento
+**Steps:**
+1. Brand accesses creator marketplace
+2. Apply filters (level, followers, etc.)
+3. Click on user profile
+4. Click "Invite to exchange"
+5. Select active campaign
+6. Confirm invitation
 
-**Resultado:** Marca marca como completado, usuario recibe recompensa.
+**Result:** Record created in `Invitations` table with status `pending`.
 
 ---
 
-### 6.6 Marca Crea Reto
+### 6.4 Brand Selects Participants
 
-**Pasos:**
-1. Marca → "Crear campaña"
-2. Selecciona tipo: **Challenge**
-3. Configuración general:
-   - Nombre
-   - Descripción
+**Steps:**
+1. Brand accesses campaign "Applicants"
+2. Reviews list of applications
+3. Click on user → view full profile
+4. Decide: **Accept** or **Reject**
+
+**Result:**
+- `Accept` → status changes to **accepted**
+- `Reject` → status changes to **rejected**
+
+---
+
+### 6.5 User Completes Exchange
+
+**Steps:**
+1. User receives acceptance notification
+2. Creates content (post, video, etc.)
+3. Publishes on social media
+4. Returns to platform → uploads publication link
+5. Brand manually validates completion
+
+**Result:** Brand marks as completed, user receives reward.
+
+---
+
+### 6.6 Brand Creates Challenge
+
+**Steps:**
+1. Brand → "Create campaign"
+2. Select type: **Challenge**
+3. General configuration:
+   - Name
+   - Description
    - Multi-day: **true/false**
    - Leaderboard: **true**
-   - Cantidad de ganadores
-4. Si multi-day, configura cada día:
-   - Día 1, 2, 3... N
-   - Por cada día:
-     - Título
-     - Instrucciones específicas
-     - Tipo de contenido esperado (video/imagen/texto/link)
-5. Submit → **Estado: draft**
-6. Publica → **Estado: active**
+   - Number of winners
+4. If multi-day, configure each day:
+   - Day 1, 2, 3... N
+   - For each day:
+     - Title
+     - Specific instructions
+     - Expected content type (video/image/text/link)
+5. Submit → **Status: draft**
+6. Publish → **Status: active**
 
-**Resultado:** Reto visible, usuarios pueden participar.
-
----
-
-### 6.7 Usuario Participa en Reto
-
-**Pasos:**
-1. Usuario ve reto en listado
-2. Click → detalle del reto
-3. Click "Participar"
-4. **Día 1 se desbloquea automáticamente**
-5. Para cada día:
-   - Usuario accede al día activo
-   - Lee instrucciones
-   - Sube contenido:
-     - Link a publicación
-     - Archivo (opcional)
-     - Texto descriptivo
-   - Submit → se guarda `ChallengeSubmission`
-6. Al completar Día N, se desbloquea Día N+1
-
-**Resultado:** Submissions guardadas, marca puede puntuar.
+**Result:** Challenge visible, users can participate.
 
 ---
 
-### 6.8 Scoring y Leaderboard
+### 6.7 User Participates in Challenge
 
-**Pasos:**
-1. Marca accede a "Submissions" del reto
-2. Revisa cada submission por usuario/día
-3. Asigna **score manual** (1-100)
-4. Sistema suma score total por usuario:
+**Steps:**
+1. User sees challenge in list
+2. Click → challenge details
+3. Click "Participate"
+4. **Day 1 unlocks automatically**
+5. For each day:
+   - User accesses active day
+   - Reads instructions
+   - Uploads content:
+     - Link to publication
+     - File (optional)
+     - Descriptive text
+   - Submit → `ChallengeSubmission` saved
+6. Upon completing Day N, Day N+1 unlocks
+
+**Result:** Submissions saved, brand can score.
+
+---
+
+### 6.8 Scoring and Leaderboard
+
+**Steps:**
+1. Brand accesses challenge "Submissions"
+2. Reviews each submission per user/day
+3. Assigns **manual score** (1-100)
+4. System sums total score per user:
    ```sql
    SELECT user_id, SUM(score) as total_score
    FROM ChallengeSubmissions
@@ -416,68 +416,68 @@ score =
    GROUP BY user_id
    ORDER BY total_score DESC
    ```
-5. Leaderboard se actualiza **en tiempo real**
+5. Leaderboard updates **in real-time**
 
-**Resultado:** Ranking visible para usuarios y marca.
+**Result:** Ranking visible to users and brand.
 
 ---
 
-### 6.9 Asignación de Puntos
+### 6.9 Points Assignment
 
-**Proceso Automático:**
-- Por cada `ChallengeSubmission` con score asignado:
+**Automatic Process:**
+- For each `ChallengeSubmission` with score assigned:
   ```
   BrandPoints[brand_id][user_id] += score
   ```
-- Puntos se acumulan **por marca** (no globales)
+- Points accumulate **per brand** (not global)
 
-**Resultado:** Usuario ve puntos acumulados en cada marca.
+**Result:** User sees accumulated points per brand.
 
 ---
 
-### 6.10 Canje de Puntos
+### 6.10 Points Redemption
 
-**Pasos:**
-1. Usuario accede a "Tienda" de marca específica
-2. Ve listado de `Rewards` disponibles
-3. Click en recompensa → detalle
-4. Click "Canjear"
-5. Sistema valida:
+**Steps:**
+1. User accesses "Store" for specific brand
+2. Views list of available `Rewards`
+3. Click on reward → details
+4. Click "Redeem"
+5. System validates:
    ```
    if (user_points >= points_cost) {
-     // Canje exitoso
+     // Redemption successful
    } else {
-     // Opción de pagar diferencia con $
+     // Option to pay difference with $
    }
    ```
-6. Se crea registro en `Redemptions`
-7. Puntos se deducen de `BrandPoints`
+6. Record created in `Redemptions`
+7. Points deducted from `BrandPoints`
 
-**Resultado:** Usuario canjea recompensa, marca gestiona entrega.
+**Result:** User redeems reward, brand manages delivery.
 
 ---
 
-## 7. Marketplace de Creadores
+## 7. Creator Marketplace
 
-### 7.1 Filtros Disponibles
-- **Followers:** rango mínimo/máximo
-- **Nivel:** Bronze, Silver, Gold, Platinum, Diamond
-- **Categoría:** fitness, tech, beauty, etc.
-- **Engagement:** mock (alto/medio/bajo)
-- **Plataformas:** Instagram, TikTok, YouTube
-- **Ubicación:** país/ciudad (opcional)
+### 7.1 Available Filters
+- **Followers:** min/max range
+- **Level:** Bronze, Silver, Gold, Platinum, Diamond
+- **Category:** fitness, tech, beauty, etc.
+- **Engagement:** mock (high/medium/low)
+- **Platforms:** Instagram, TikTok, YouTube
+- **Location:** country/city (optional)
 
-### 7.2 IA Matching
+### 7.2 AI Matching
 
-**Input (Marca):**
+**Input (Brand):**
 ```
-"Busco fitness influencers con engagement alto en Argentina, 
- entre 10k-50k seguidores en Instagram"
+"I'm looking for fitness influencers with high engagement in Argentina, 
+ between 10k-50k Instagram followers"
 ```
 
-**Procesamiento Backend (Edge Function):**
-1. Parse del prompt usando LLM
-2. Conversión a query estructurada:
+**Backend Processing (Edge Function):**
+1. Parse prompt using LLM
+2. Convert to structured query:
    ```json
    {
      "category": "fitness",
@@ -486,8 +486,8 @@ score =
      "followers_instagram": { "min": 10000, "max": 50000 }
    }
    ```
-3. Búsqueda en DB con scoring
-4. Ranking por relevancia
+3. Search DB with scoring
+4. Rank by relevance
 
 **Output:**
 ```json
@@ -500,56 +500,56 @@ score =
 
 ---
 
-## 8. Sistema de Notificaciones
+## 8. Notification System
 
 ### 8.1 Triggers
 
-| Evento | Receptor | Descripción |
+| Event | Recipient | Description |
 |--------|----------|-------------|
-| Nueva campaña | Usuario (followers de marca) | "Marca X lanzó nueva campaña" |
-| Invitación a canje | Usuario específico | "Marca X te invitó a un canje" |
-| Aceptación | Usuario | "Tu aplicación fue aceptada" |
-| Rechazo | Usuario | "Tu aplicación fue rechazada" |
-| Nuevo día desbloqueado | Usuario participante | "Día 2 del reto está disponible" |
-| Puntuación recibida | Usuario | "Recibiste 85 puntos de Marca X" |
+| New campaign | User (brand followers) | "Brand X launched new campaign" |
+| Exchange invitation | Specific user | "Brand X invited you to an exchange" |
+| Acceptance | User | "Your application was accepted" |
+| Rejection | User | "Your application was rejected" |
+| New day unlocked | Challenge participant | "Day 2 of challenge is available" |
+| Score received | User | "You received 85 points from Brand X" |
 
-### 8.2 Implementación
-- **MVP:** Notificaciones in-app (tabla `Notifications`)
-- **Futuro:** Email, push notifications
+### 8.2 Implementation
+- **MVP:** In-app notifications (`Notifications` table)
+- **Future:** Email, push notifications
 
 ---
 
-## 9. Pantallas Principales
+## 9. Main Screens
 
-### 9.1 Usuario/Creador
+### 9.1 User/Creator
 
-| Pantalla | Descripción |
-|----------|-------------|
-| **Home** | Feed de campañas activas (canjes + retos) |
-| **Marketplace** | Explorar marcas y campañas |
-| **Perfil Público** | Portfolio con métricas, submissions, nivel |
-| **Mis Campañas** | Canjes/retos activos y completados |
-| **Mis Puntos** | Desglose de puntos por marca |
-| **Tienda** | Rewards disponibles por marca |
-| **Notificaciones** | Centro de notificaciones |
+| Screen | Description |
+|--------|-------------|
+| **Home** | Feed of active campaigns (exchanges + challenges) |
+| **Marketplace** | Explore brands and campaigns |
+| **Public Profile** | Portfolio with metrics, submissions, level |
+| **My Campaigns** | Active and completed exchanges/challenges |
+| **My Points** | Points breakdown per brand |
+| **Store** | Available rewards per brand |
+| **Notifications** | Notification center |
 
-### 9.2 Marca
+### 9.2 Brand
 
-| Pantalla | Descripción |
-|----------|-------------|
-| **Dashboard** | Overview de campañas, métricas, actividad |
-| **Crear Campaña** | Wizard para canjes/retos |
-| **Mis Campañas** | Gestión de campañas activas/pasadas |
-| **Applicants** | Revisar aplicaciones y submissions |
-| **Marketplace** | Explorar creadores (con IA matching) |
-| **Perfil Usuario** | Vista detallada de creador (portfolio) |
-| **Tienda Config** | Gestionar rewards y redemptions |
+| Screen | Description |
+|--------|-------------|
+| **Dashboard** | Campaign overview, metrics, activity |
+| **Create Campaign** | Wizard for exchanges/challenges |
+| **My Campaigns** | Management of active/past campaigns |
+| **Applicants** | Review applications and submissions |
+| **Marketplace** | Explore creators (with AI matching) |
+| **User Profile** | Detailed view of creator (portfolio) |
+| **Store Config** | Manage rewards and redemptions |
 
 ---
 
 ## 10. API Endpoints
 
-### 10.1 Autenticación
+### 10.1 Authentication
 ```
 POST /auth/signup
 POST /auth/login
@@ -557,253 +557,253 @@ POST /auth/logout
 GET  /auth/me
 ```
 
-### 10.2 Campañas
+### 10.2 Campaigns
 ```
-POST /campaigns              # Crear campaña
-GET  /campaigns              # Listar campañas (filtros)
-GET  /campaigns/:id          # Detalle de campaña
-PATCH /campaigns/:id/status  # Cambiar estado (draft/active/closed)
-```
-
-### 10.3 Canjes (Exchanges)
-```
-POST /exchanges                    # Crear canje
-GET  /exchanges                    # Listar canjes
-POST /exchanges/:id/apply          # Usuario aplica
-POST /exchanges/:id/invite         # Marca invita usuario
-POST /applications/:id/accept      # Marca acepta aplicación
-POST /applications/:id/reject      # Marca rechaza aplicación
+POST /campaigns              # Create campaign
+GET  /campaigns              # List campaigns (filters)
+GET  /campaigns/:id          # Campaign details
+PATCH /campaigns/:id/status  # Change status (draft/active/closed)
 ```
 
-### 10.4 Retos (Challenges)
+### 10.3 Exchanges
 ```
-POST /challenges                   # Crear reto
-GET  /challenges/:id               # Detalle de reto
-POST /challenges/:id/join          # Usuario se une
-POST /challenges/:id/submit        # Usuario envía submission
-GET  /challenges/:id/leaderboard   # Ver ranking
-PATCH /submissions/:id/score       # Marca asigna score
-```
-
-### 10.5 Puntos
-```
-GET  /brands/:id/points            # Puntos de usuario en marca
-POST /points/add                   # Sistema suma puntos
-GET  /users/:id/points             # Todos los puntos del usuario
+POST /exchanges                    # Create exchange
+GET  /exchanges                    # List exchanges
+POST /exchanges/:id/apply          # User applies
+POST /exchanges/:id/invite         # Brand invites user
+POST /applications/:id/accept      # Brand accepts application
+POST /applications/:id/reject      # Brand rejects application
 ```
 
-### 10.6 Recompensas
+### 10.4 Challenges
 ```
-GET  /brands/:id/rewards           # Listar rewards de marca
-POST /rewards                      # Crear reward
-POST /rewards/:id/redeem           # Usuario canjea
-GET  /redemptions                  # Historial de canjes
+POST /challenges                   # Create challenge
+GET  /challenges/:id               # Challenge details
+POST /challenges/:id/join          # User joins
+POST /challenges/:id/submit        # User submits
+GET  /challenges/:id/leaderboard   # View ranking
+PATCH /submissions/:id/score       # Brand assigns score
+```
+
+### 10.5 Points
+```
+GET  /brands/:id/points            # User points in brand
+POST /points/add                   # System adds points
+GET  /users/:id/points             # All user points
+```
+
+### 10.6 Rewards
+```
+GET  /brands/:id/rewards           # List brand rewards
+POST /rewards                      # Create reward
+POST /rewards/:id/redeem           # User redeems
+GET  /redemptions                  # Redemption history
 ```
 
 ### 10.7 Marketplace
 ```
-GET  /users/search                 # Búsqueda con filtros
-POST /users/search/ai              # Búsqueda con IA
-GET  /users/:id/profile            # Perfil público
+GET  /users/search                 # Search with filters
+POST /users/search/ai              # AI-powered search
+GET  /users/:id/profile            # Public profile
 ```
 
 ---
 
-## 11. Reglas de Negocio Clave
+## 11. Key Business Rules
 
-### 11.1 Puntos
-- **Los puntos son específicos por marca** (no intercambiables)
-- Se acumulan automáticamente al recibir score en submissions
-- Se deducen al canjear rewards
+### 11.1 Points
+- **Points are brand-specific** (not interchangeable)
+- Automatically accumulated when receiving score on submissions
+- Deducted when redeeming rewards
 
 ### 11.2 Leaderboard
-- Se actualiza **en tiempo real** al asignar scores
-- Ordenado por `SUM(score) DESC`
-- Empates se resuelven por `created_at` más temprano
+- Updates **in real-time** when assigning scores
+- Ordered by `SUM(score) DESC`
+- Ties resolved by earlier `created_at`
 
-### 11.3 Retos Multi-day
-- Días se desbloquean **progresivamente**
-- Usuario debe completar Día N para acceder a Día N+1
-- No se puede saltar días
+### 11.3 Multi-day Challenges
+- Days unlock **progressively**
+- User must complete Day N to access Day N+1
+- Cannot skip days
 
-### 11.4 Autonomía de Marca
-- Marca define TODO: puntos, premios, reglas de campañas
-- Marca tiene control total de aceptación/rechazo
+### 11.4 Brand Autonomy
+- Brand defines everything: points, rewards, campaign rules
+- Brand has full control over acceptance/rejection
 
-### 11.5 Aplicaciones Abiertas
-- **Usuarios pueden aplicar aunque no cumplan requisitos exactos**
-- Marca decide finalmente (permite descubrimiento)
+### 11.5 Open Applications
+- **Users can apply even if they don't meet exact requirements**
+- Brand decides finally (enables discovery)
 
 ---
 
 ## 12. Edge Cases
 
-### 12.1 Usuario Aplica y Luego es Invitado
-**Escenario:** Usuario aplica a canje, luego marca lo invita.
+### 12.1 User Applies and Later Gets Invited
+**Scenario:** User applies to exchange, then brand invites them.
 
-**Comportamiento:**
-- Si ya aplicó con estado `applied` → cambiar a `invited`
-- Notificar usuario de la invitación
-- No duplicar registros
+**Behavior:**
+- If already applied with status `applied` → change to `invited`
+- Notify user of invitation
+- Don't duplicate records
 
-### 12.2 Usuario No Completa Todos los Días
-**Escenario:** Usuario participa en reto multi-day pero abandona.
+### 12.2 User Doesn't Complete All Days
+**Scenario:** User participates in multi-day challenge but abandons.
 
-**Comportamiento:**
-- Submissions hasta ese momento siguen válidas
-- No aparece en leaderboard si no completó mínimo requerido (definido por marca)
-- Puntos acumulados hasta el abandono se mantienen
+**Behavior:**
+- Submissions up to that point remain valid
+- Won't appear on leaderboard if minimum requirement not met (brand-defined)
+- Accumulated points up to abandonment are kept
 
-### 12.3 Empate en Leaderboard
-**Escenario:** Dos usuarios con mismo score total.
+### 12.3 Leaderboard Tie
+**Scenario:** Two users with same total score.
 
-**Criterio de desempate:**
-1. Mayor score en último día
-2. Si persiste empate: `created_at` más temprano (primera submission)
+**Tiebreaker Criteria:**
+1. Higher score on last day
+2. If still tied: earlier `created_at` (first submission)
 
-### 12.4 Usuario Sin Puntos Intenta Canjear
-**Escenario:** Puntos insuficientes para reward.
+### 12.4 User Without Points Tries to Redeem
+**Scenario:** Insufficient points for reward.
 
-**Comportamiento:**
-- Mostrar modal: "Te faltan X puntos"
-- Opción: "Pagar diferencia con dinero" (solo MVP mock, sin pago real)
-- Bloquear canje si no acepta pagar
+**Behavior:**
+- Show modal: "You need X more points"
+- Option: "Pay difference with money" (MVP mock only, no real payment)
+- Block redemption if user doesn't accept paying
 
-### 12.5 Marca Cambia Reglas Mid-Campaign
-**Restricción:** 
-- **BLOQUEADO** una vez que campaña está `active`
-- Solo puede cerrar (`closed`) prematuramente
-- Requiere crear nueva campaña para cambios
-
----
-
-## 13. Alcance del MVP
-
-### 13.1 Incluido
-
-✅ Sistema completo de canjes  
-✅ Sistema completo de retos (multi-day + leaderboard)  
-✅ Marketplace con filtros y búsqueda IA  
-✅ Sistema de niveles dinámico  
-✅ Puntos por marca + tienda de rewards  
-✅ Notificaciones in-app  
-✅ Perfiles públicos (portfolio)  
-
-### 13.2 Excluido del MVP
-
-❌ **Integraciones reales con redes sociales**  
-   - Sin OAuth de Instagram/TikTok  
-   - Sin scraping automático de métricas  
-   - Datos de followers ingresados manualmente  
-
-❌ **Pagos reales**  
-   - Sin integración con Stripe/MercadoPago  
-   - Flujo de pago es mock/simulado  
-
-❌ **Logística de envíos**  
-   - Sin tracking de envíos de productos  
-   - Coordinación manual marca-usuario  
-
-❌ **Moderación automática**  
-   - Sin detección de contenido inapropiado  
-   - Sin verificación automática de cumplimiento  
-   - Validación manual por marca  
+### 12.5 Brand Changes Rules Mid-Campaign
+**Restriction:**
+- **BLOCKED** once campaign is `active`
+- Can only close (`closed`) prematurely
+- Requires creating new campaign for changes
 
 ---
 
-## 14. Métricas de Éxito (KPIs)
+## 13. MVP Scope
 
-### 14.1 Métricas de Marca
-- Cantidad de campañas creadas
-- Tasa de aceptación de aplicaciones
-- Tiempo promedio de respuesta a applicants
-- ROI de campañas (engagement generado)
+### 13.1 Included
 
-### 14.2 Métricas de Usuario
-- Tasa de aplicación a canjes
-- Tasa de completitud en retos multi-day
-- Progresión de niveles (Bronze → Diamond)
-- Puntos acumulados por marca
+✅ Complete exchange system
+✅ Complete challenge system (multi-day + leaderboard)
+✅ Marketplace with filters and AI search
+✅ Dynamic level system
+✅ Points per brand + rewards store
+✅ In-app notifications
+✅ Public profiles (portfolio)
 
-### 14.3 Métricas de Plataforma
+### 13.2 Excluded from MVP
+
+❌ **Real social media integrations**
+   - No OAuth for Instagram/TikTok
+   - No automatic metrics scraping
+   - Follower data entered manually
+
+❌ **Real payments**
+   - No Stripe/MercadoPago integration
+   - Payment flow is mock/simulated
+
+❌ **Shipping logistics**
+   - No product shipment tracking
+   - Manual brand-user coordination
+
+❌ **Automatic moderation**
+   - No inappropriate content detection
+   - No automatic compliance verification
+   - Manual validation by brand
+
+---
+
+## 14. Success Metrics (KPIs)
+
+### 14.1 Brand Metrics
+- Number of campaigns created
+- Application acceptance rate
+- Average response time to applicants
+- Campaign ROI (engagement generated)
+
+### 14.2 User Metrics
+- Rate of exchange applications
+- Multi-day challenge completion rate
+- Level progression (Bronze → Diamond)
+- Accumulated points per brand
+
+### 14.3 Platform Metrics
 - MAU (Monthly Active Users)
-- Cantidad de submissions por campaña
-- Tasa de conversión (aplicación → aceptación)
-- Tiempo promedio en plataforma
+- Submissions per campaign
+- Conversion rate (application → acceptance)
+- Average time on platform
 
 ---
 
-## 15. Roadmap Post-MVP
+## 15. Post-MVP Roadmap
 
-### Fase 2
-- Integración OAuth redes sociales
-- Analytics avanzados para marcas
-- Sistema de mensajería marca-usuario
+### Phase 2
+- Social media OAuth integration
+- Advanced brand analytics
+- Brand-user messaging system
 
-### Fase 3
-- Pagos reales (Stripe/MP)
-- Sistema de reseñas marca ↔ usuario
-- Moderación automática con IA
+### Phase 3
+- Real payments (Stripe/MP)
+- Brand ↔ User review system
+- AI-powered moderation
 
-### Fase 4
-- App móvil nativa
-- Programa de referidos
-- Verificación de cuentas (badge)
-
----
-
-## 16. Consideraciones de Diseño UX
-
-### 16.1 Principios
-- **Desktop-first:** optimizado para pantallas grandes
-- **Card-based:** contenido en cards visuales (inspiración Airbnb)
-- **Claridad:** CTAs prominentes, jerarquía visual clara
-- **Feedback:** estados de carga, confirmaciones, errores claros
-
-### 16.2 Componentes Clave
-- **CampaignCard:** título, marca, tipo, recompensa, deadline
-- **UserCard:** avatar, username, nivel, followers, engagement
-- **LeaderboardRow:** posición, usuario, score, progreso
-- **RewardCard:** imagen, título, costo en puntos, disponibilidad
+### Phase 4
+- Native mobile app
+- Referral program
+- Account verification (badge)
 
 ---
 
-## 17. Seguridad y Privacidad
+## 16. UX Design Considerations
 
-### 17.1 Autenticación
-- Passwords hasheados (bcrypt)
-- JWT para sesiones
+### 16.1 Principles
+- **Desktop-first:** optimized for large screens
+- **Card-based:** visual content in cards (Airbnb inspiration)
+- **Clarity:** prominent CTAs, clear visual hierarchy
+- **Feedback:** loading states, confirmations, clear errors
+
+### 16.2 Key Components
+- **CampaignCard:** title, brand, type, reward, deadline
+- **UserCard:** avatar, username, level, followers, engagement
+- **LeaderboardRow:** position, user, score, progress
+- **RewardCard:** image, title, points cost, availability
+
+---
+
+## 17. Security and Privacy
+
+### 17.1 Authentication
+- Hashed passwords (bcrypt)
+- JWT for sessions
 - Refresh tokens
 
-### 17.2 Autorización
-- Row Level Security (RLS) en Supabase
-- Marca solo ve sus campañas
-- Usuario solo ve sus puntos/submissions
+### 17.2 Authorization
+- Row Level Security (RLS) in Supabase
+- Brand only sees their campaigns
+- User only sees their points/submissions
 
-### 17.3 Datos Sensibles
-- Email no público
-- Followers/métricas opcionales (usuario decide)
-- Submissions solo visibles para marca y participante
-
----
-
-## Apéndices
-
-### A. Glosario
-- **Canje:** colaboración 1:1 marca-usuario (producto/$ por contenido)
-- **Reto:** competencia gamificada con múltiples participantes
-- **Submission:** entrega de contenido en reto
-- **Score:** puntuación 1-100 asignada por marca
-- **Nivel:** clasificación dinámica del usuario (Bronze-Diamond)
-- **BrandPoints:** puntos específicos por marca
-
-### B. Referencias de Diseño
-- Airbnb (cards, spacing, tipografía)
-- BigBox (marketplace, filtros)
-- Duolingo (gamificación, leaderboard)
+### 17.3 Sensitive Data
+- Email not public
+- Followers/metrics optional (user decides)
+- Submissions only visible to brand and participant
 
 ---
 
-**Versión:** 1.0  
-**Fecha:** 2026-03-28  
-**Estado:** Draft para desarrollo MVP
+## Appendices
+
+### A. Glossary
+- **Exchange:** 1:1 brand-user collaboration (product/$ for content)
+- **Challenge:** gamified competition with multiple participants
+- **Submission:** content delivery in challenge
+- **Score:** 1-100 rating assigned by brand
+- **Level:** dynamic user classification (Bronze-Diamond)
+- **BrandPoints:** points specific to a brand
+
+### B. Design References
+- Airbnb (cards, spacing, typography)
+- BigBox (marketplace, filters)
+- Duolingo (gamification, leaderboard)
+
+---
+
+**Version:** 1.0  
+**Date:** 2026-03-28  
+**Status:** Draft for MVP development
