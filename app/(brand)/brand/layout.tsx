@@ -58,15 +58,13 @@ export default function BrandLayout({ children }: { children: React.ReactNode })
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="sticky top-0 z-40 border-b border-gray-100 bg-white/95 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
+        <div className="mx-auto grid max-w-7xl grid-cols-1 gap-4 px-4 py-4 sm:px-6 lg:grid-cols-[auto_1fr_auto] lg:items-center">
           <div className="flex items-center justify-between gap-4">
             <Link href="/brand/dashboard" className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-indigo-600 shadow-sm shadow-indigo-200">
-                <span className="text-sm font-bold text-white">CS</span>
-              </div>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/icon.png" alt="CollabSpace" className="h-10 w-10 rounded-2xl shadow-sm" />
               <div>
                 <div className="font-bold text-gray-900">CollabSpace</div>
-                <div className="text-xs text-gray-400">Panel de marca</div>
               </div>
             </Link>
 
@@ -78,8 +76,7 @@ export default function BrandLayout({ children }: { children: React.ReactNode })
             </button>
           </div>
 
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:gap-6">
-            <nav className="flex items-center gap-1 overflow-x-auto rounded-2xl bg-gray-100 p-1">
+          <nav className="mx-auto flex w-fit items-center gap-1 overflow-x-auto rounded-2xl bg-gray-100 p-1">
               {navItems.map((item) => {
                 const isActive = pathname === item.href || (item.href !== '/brand/dashboard' && pathname.startsWith(item.href))
 
@@ -97,40 +94,36 @@ export default function BrandLayout({ children }: { children: React.ReactNode })
                   </Link>
                 )
               })}
-            </nav>
+          </nav>
 
-            <div className="flex items-center justify-between gap-3 lg:justify-end">
-              <div className="flex min-w-0 items-center gap-3 rounded-2xl border border-gray-100 bg-white px-3 py-2 shadow-sm">
-                <div className="h-10 w-10 overflow-hidden rounded-xl border border-gray-200 bg-gray-50">
-                  {showLogoImage ? (
-                    <>
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={rawLogo}
-                        alt={profile.name}
-                        className="h-full w-full object-contain p-1.5"
-                        onError={() => setFailedLogoSrc(rawLogo)}
-                      />
-                    </>
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center bg-indigo-100">
-                      <span className="text-sm font-bold text-indigo-600">{brandInitial}</span>
-                    </div>
-                  )}
-                </div>
-                <div className="min-w-0">
-                  <div className="truncate text-sm font-semibold text-gray-900">{profile.name}</div>
-                  <div className="truncate text-xs text-gray-400">{profile.industry || 'Marca'}</div>
-                </div>
+          <div className="flex items-center justify-between gap-3 lg:justify-end">
+            <div className="flex items-center gap-2 rounded-xl px-3 py-1.5">
+              <div className="h-7 w-7 overflow-hidden rounded-full border border-gray-200 bg-gray-50">
+                {showLogoImage ? (
+                  <>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={rawLogo}
+                      alt={profile.name}
+                      className="h-full w-full object-cover"
+                      onError={() => setFailedLogoSrc(rawLogo)}
+                    />
+                  </>
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center bg-indigo-100">
+                    <span className="text-xs font-bold text-indigo-600">{brandInitial}</span>
+                  </div>
+                )}
               </div>
-
-              <button
-                onClick={handleLogout}
-                className="hidden rounded-xl border border-gray-200 px-3 py-2 text-sm font-medium text-gray-600 transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-600 lg:inline-flex"
-              >
-                Cerrar sesión
-              </button>
+              <span className="max-w-32 truncate text-sm font-medium text-gray-700">{profile.name}</span>
             </div>
+
+            <button
+              onClick={handleLogout}
+              className="hidden rounded-xl border border-gray-200 px-3 py-2 text-sm font-medium text-gray-600 transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-600 lg:inline-flex"
+            >
+              Cerrar sesión
+            </button>
           </div>
         </div>
       </header>

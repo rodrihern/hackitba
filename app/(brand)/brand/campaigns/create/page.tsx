@@ -48,6 +48,10 @@ function getRequestedCampaignType(type: string | null): CampaignType | null {
   return type === 'exchange' || type === 'challenge' ? type : null
 }
 
+function getRequestedRewardType(type: string | null): 'product' | 'money' | 'both' | null {
+  return type === 'product' || type === 'money' || type === 'both' ? type : null
+}
+
 export default function CreateCampaignPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -96,6 +100,28 @@ export default function CreateCampaignPage() {
     setCampaignType(requestedCampaignType)
     setStep(currentStep => (currentStep === 1 ? 2 : currentStep))
   }, [requestedCampaignType])
+
+  useEffect(() => {
+    if (searchParams.get('fromReward') !== '1') return
+    if (requestedCampaignType !== 'exchange') return
+
+    const rewardTitle = searchParams.get('rewardTitle')?.trim() || ''
+    const rewardDescription = searchParams.get('rewardDescription')?.trim() || ''
+    const requestedRewardType = getRequestedRewardType(searchParams.get('rewardType'))
+
+    if (rewardTitle) {
+      setTitle(`Canje: ${rewardTitle}`)
+    }
+
+    if (rewardDescription) {
+      setDescription(rewardDescription)
+      setProductDescription(rewardDescription)
+    } else if (rewardTitle) {
+      setProductDescription(rewardTitle)
+    }
+
+    setRewardType(requestedRewardType || 'product')
+  }, [requestedCampaignType, searchParams])
 
   const addDay = () => {
     setDays(prev => [...prev, { title: '', description: '', contentType: '', instructions: '' }])

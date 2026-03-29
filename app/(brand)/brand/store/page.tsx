@@ -3,6 +3,7 @@
 export const dynamic = 'force-dynamic'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth-context'
 import RewardCard from '@/components/RewardCard'
 import type { BrandProfile, Reward, RewardType } from '@/lib/types'
@@ -24,6 +25,7 @@ const defaultForm = {
 
 export default function BrandStorePage() {
   const { currentUser, isLoading: authLoading } = useAuth()
+  const router = useRouter()
   const brand = currentUser?.profile as BrandProfile
 
   const [rewards, setRewards] = useState<Reward[]>([])
@@ -128,6 +130,21 @@ export default function BrandStorePage() {
     }
   }
 
+  const handleCreateExchangeShortcut = (reward: Reward) => {
+    const mappedRewardType: 'product' | 'money' | 'both' = 'product'
+    const params = new URLSearchParams({
+      type: 'exchange',
+      fromReward: '1',
+      rewardId: reward.id,
+      rewardTitle: reward.title,
+      rewardDescription: reward.description || '',
+      rewardType: mappedRewardType,
+      rewardPoints: String(reward.pointsCost),
+    })
+
+    router.push(`/brand/campaigns/create?${params.toString()}`)
+  }
+
   if (isLoading) {
     return (
       <div className="p-8 max-w-5xl mx-auto flex items-center justify-center min-h-64">
@@ -186,7 +203,7 @@ export default function BrandStorePage() {
         <div className="grid grid-cols-3 gap-5">
           {rewards.map(reward => (
             <div key={reward.id} className="relative group">
-              <RewardCard reward={reward} />
+              <RewardCard reward={reward} onRedeem={handleCreateExchangeShortcut} />
               {/* Edit/Delete overlay */}
               <div className="absolute top-3 left-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                 <button

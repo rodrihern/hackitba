@@ -42,3 +42,19 @@ body {
 *::-webkit-scrollbar-thumb:hover {
   background: #818cf8;
 }
+
+/* Keep text readable on violet action buttons across the app */
+button[class*="bg-indigo-5"],
+button[class*="bg-indigo-6"],
+button[class*="bg-indigo-7"],
+button[class*="bg-indigo-8"],
+button[class*="bg-violet-5"],
+button[class*="bg-violet-6"],
+button[class*="bg-violet-7"],
+button[class*="bg-violet-8"],
+button[class*="from-indigo-5"],
+button[class*="from-indigo-6"],
+button[class*="from-violet-5"],
+button[class*="from-violet-6"] {
+  color: #ffffff;
+}
