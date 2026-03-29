@@ -1,6 +1,6 @@
 'use client'
 
-import React, { createContext, useContext, useState, useEffect } from 'react'
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react'
 import type { UserRole, UserProfile, BrandProfile } from './types'
 import type { Session } from '@supabase/supabase-js'
 import {
@@ -29,6 +29,7 @@ interface SignupData {
 interface AuthContextType {
   currentUser: AuthUser | null
   isLoading: boolean
+  isRecoveringSession: boolean
   session: Session | null
   authError: string | null
   login: (email: string, password: string) => Promise<{ success: boolean; role?: UserRole; error?: string }>
@@ -38,6 +39,47 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | null>(null)
+const INITIAL_SESSION_TIMEOUT_MS = 12000
+const INITIAL_SESSION_RETRY_TIMEOUT_MS = 8000
+const PROFILE_RESOLUTION_TIMEOUT_MS = 15000
+const AUTH_DEBUG_PREFIX = '[auth]'
+
+function nowLabel() {
+  return new Date().toISOString()
+}
+
+function logAuthDebug(step: string, details?: Record<string, unknown>) {
+  if (typeof window === 'undefined') return
+
+  if (details) {
+    console.debug(`${AUTH_DEBUG_PREFIX} ${nowLabel()} ${step}`, details)
+    return
+  }
+
+  console.debug(`${AUTH_DEBUG_PREFIX} ${nowLabel()} ${step}`)
+}
+
+function timeoutError(message: string) {
+  return new Error(message)
+}
+
+async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string): Promise<T> {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined
+
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => reject(timeoutError(message)), timeoutMs)
+  })
+
+  try {
+    return await Promise.race([promise, timeoutPromise])
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId)
+  }
+}
+
+async function wait(ms: number) {
+  await new Promise((resolve) => setTimeout(resolve, ms))
+}
 
 function clearClientAuthArtifacts() {
   if (typeof window === 'undefined') return
@@ -74,34 +116,83 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null)
   const [session, setSession] = useState<Session | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [isRecoveringSession, setIsRecoveringSession] = useState(false)
   const [authError, setAuthError] = useState<string | null>(null)
+  const authRequestIdRef = useRef(0)
+  const authStateChangeTaskRef = useRef<number | null>(null)
 
   const resolveSessionUser = async (activeSession: Session | null) => {
+    const requestId = ++authRequestIdRef.current
+    const resolutionStartedAt = typeof performance !== 'undefined' ? performance.now() : Date.now()
     setSession(activeSession)
+    logAuthDebug('resolveSessionUser:start', {
+      requestId,
+      hasSession: Boolean(activeSession),
+      userId: activeSession?.user?.id ?? null,
+      roleHint: activeSession?.user?.user_metadata?.role ?? null,
+    })
 
     if (!activeSession?.user) {
       setCurrentUser(null)
       setAuthError(null)
+      setIsRecoveringSession(false)
+      logAuthDebug('resolveSessionUser:no-session', { requestId })
       return
     }
 
     try {
+      setAuthError(null)
       const roleHint = activeSession.user.user_metadata?.role
-      let userData = await fetchAuthUserDataWithRoleHint(activeSession.user.id, roleHint)
+      const profileFetchStartedAt = typeof performance !== 'undefined' ? performance.now() : Date.now()
+      let userData = await withTimeout(
+        fetchAuthUserDataWithRoleHint(activeSession.user.id, roleHint),
+        PROFILE_RESOLUTION_TIMEOUT_MS,
+        'La sesión existe, pero Supabase tardó demasiado en devolver el perfil. Revisá conectividad, RLS y que el proyecto configurado sea el correcto.'
+      )
+      logAuthDebug('resolveSessionUser:profile-fetch-complete', {
+        requestId,
+        durationMs: Math.round((typeof performance !== 'undefined' ? performance.now() : Date.now()) - profileFetchStartedAt),
+        foundProfile: Boolean(userData),
+      })
 
       if (!userData) {
-        const repaired = await ensureRoleProfile({
-          id: activeSession.user.id,
-          email: activeSession.user.email,
-          role: roleHint,
-          username: activeSession.user.user_metadata?.username,
-          companyName: activeSession.user.user_metadata?.companyName,
-          industry: activeSession.user.user_metadata?.industry,
+        const repairStartedAt = typeof performance !== 'undefined' ? performance.now() : Date.now()
+        const repaired = await withTimeout(
+          ensureRoleProfile({
+            id: activeSession.user.id,
+            email: activeSession.user.email,
+            role: roleHint,
+            username: activeSession.user.user_metadata?.username,
+            companyName: activeSession.user.user_metadata?.companyName,
+            industry: activeSession.user.user_metadata?.industry,
+          }),
+          PROFILE_RESOLUTION_TIMEOUT_MS,
+          'Supabase tardó demasiado intentando reparar el perfil del usuario. Revisá las policies y migraciones de perfiles.'
+        )
+        logAuthDebug('resolveSessionUser:profile-repair-complete', {
+          requestId,
+          durationMs: Math.round((typeof performance !== 'undefined' ? performance.now() : Date.now()) - repairStartedAt),
+          repaired,
         })
 
         if (repaired) {
-          userData = await fetchAuthUserDataWithRoleHint(activeSession.user.id, roleHint)
+          const refetchStartedAt = typeof performance !== 'undefined' ? performance.now() : Date.now()
+          userData = await withTimeout(
+            fetchAuthUserDataWithRoleHint(activeSession.user.id, roleHint),
+            PROFILE_RESOLUTION_TIMEOUT_MS,
+            'Supabase creó el perfil, pero tardó demasiado en devolverlo. Revisá conectividad y estado del proyecto.'
+          )
+          logAuthDebug('resolveSessionUser:profile-refetch-complete', {
+            requestId,
+            durationMs: Math.round((typeof performance !== 'undefined' ? performance.now() : Date.now()) - refetchStartedAt),
+            foundProfile: Boolean(userData),
+          })
         }
+      }
+
+      if (authRequestIdRef.current !== requestId) {
+        logAuthDebug('resolveSessionUser:stale-result', { requestId })
+        return
       }
 
       if (!userData) {
@@ -109,48 +200,157 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setAuthError(
           'Hay una sesión válida en Supabase, pero no existe un perfil usable en la base. Revisá que Vercel apunte al proyecto correcto y que la migración supabase/migrations/202611010001_auth_profile_bootstrap.sql esté aplicada.'
         )
+        setIsRecoveringSession(false)
+        logAuthDebug('resolveSessionUser:missing-profile', {
+          requestId,
+          durationMs: Math.round((typeof performance !== 'undefined' ? performance.now() : Date.now()) - resolutionStartedAt),
+        })
         return
       }
 
       setCurrentUser(userData)
       setAuthError(null)
+      setIsRecoveringSession(false)
+      logAuthDebug('resolveSessionUser:success', {
+        requestId,
+        durationMs: Math.round((typeof performance !== 'undefined' ? performance.now() : Date.now()) - resolutionStartedAt),
+        resolvedRole: userData.role,
+      })
     } catch (err) {
+      if (authRequestIdRef.current !== requestId) {
+        logAuthDebug('resolveSessionUser:stale-error', { requestId })
+        return
+      }
       setCurrentUser(null)
       setAuthError(err instanceof Error ? err.message : 'No se pudo cargar la sesión actual')
-      throw err
+      setIsRecoveringSession(false)
+      logAuthDebug('resolveSessionUser:error', {
+        requestId,
+        durationMs: Math.round((typeof performance !== 'undefined' ? performance.now() : Date.now()) - resolutionStartedAt),
+        error: err instanceof Error ? err.message : 'unknown',
+      })
     }
   }
 
   useEffect(() => {
-    // Safety timeout to prevent infinite loading
-    const timeoutId = setTimeout(() => {
-      console.warn('Auth session loading timed out after 10 seconds')
-      setIsLoading(false)
-    }, 10000)
+    let isMounted = true
+    const sessionBootstrapStartedAt = typeof performance !== 'undefined' ? performance.now() : Date.now()
+    logAuthDebug('bootstrap:start')
 
-    // Get initial session
-    getAuthSession()
+    const loadInitialSession = async () => {
+      try {
+        return await withTimeout(
+          getAuthSession(),
+          INITIAL_SESSION_TIMEOUT_MS,
+          'Supabase tardó demasiado en restaurar la sesión. Intentá recargar o volver a iniciar sesión.'
+        )
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'No se pudo restaurar la sesión'
+        const isTimeout = message.toLowerCase().includes('tardó demasiado')
+
+        if (!isTimeout) {
+          throw err
+        }
+
+        setIsRecoveringSession(true)
+        logAuthDebug('bootstrap:getSession:retrying', {
+          firstAttemptDurationMs: Math.round((typeof performance !== 'undefined' ? performance.now() : Date.now()) - sessionBootstrapStartedAt),
+        })
+
+        await wait(250)
+
+        return withTimeout(
+          getAuthSession(),
+          INITIAL_SESSION_RETRY_TIMEOUT_MS,
+          'Supabase no logró restaurar la sesión después de reintentar. Intentá recargar o volver a iniciar sesión.'
+        )
+      }
+    }
+
+    loadInitialSession()
       .then(async ({ data: { session } }) => {
+        if (!isMounted) return
+        logAuthDebug('bootstrap:getSession:success', {
+          durationMs: Math.round((typeof performance !== 'undefined' ? performance.now() : Date.now()) - sessionBootstrapStartedAt),
+          hasSession: Boolean(session),
+          userId: session?.user?.id ?? null,
+        })
         await resolveSessionUser(session)
       })
       .catch((err) => {
+        if (!isMounted) return
         console.error('Error loading auth session:', err)
+        setCurrentUser(null)
+        setSession(null)
+        setIsRecoveringSession(false)
+        setAuthError(err instanceof Error ? err.message : 'No se pudo restaurar la sesión')
+        logAuthDebug('bootstrap:getSession:error', {
+          durationMs: Math.round((typeof performance !== 'undefined' ? performance.now() : Date.now()) - sessionBootstrapStartedAt),
+          error: err instanceof Error ? err.message : 'unknown',
+        })
       })
       .finally(() => {
-        clearTimeout(timeoutId)
-        setIsLoading(false)
+        if (isMounted) {
+          setIsLoading(false)
+          logAuthDebug('bootstrap:complete', {
+            durationMs: Math.round((typeof performance !== 'undefined' ? performance.now() : Date.now()) - sessionBootstrapStartedAt),
+          })
+        }
       })
 
-    // Listen for auth changes
-    const { data: { subscription } } = onAuthStateChanged(async (_event, session) => {
-      try {
-        await resolveSessionUser(session)
-      } catch (err) {
-        console.error('Error loading auth state change:', err)
+    const { data: { subscription } } = onAuthStateChanged((_event, session) => {
+      if (!isMounted) return
+
+      if (authStateChangeTaskRef.current !== null && typeof window !== 'undefined') {
+        window.clearTimeout(authStateChangeTaskRef.current)
       }
+
+      const authEventStartedAt = typeof performance !== 'undefined' ? performance.now() : Date.now()
+      logAuthDebug('onAuthStateChange:queued', {
+        eventSession: Boolean(session),
+        userId: session?.user?.id ?? null,
+      })
+
+      const scheduleAuthStateResolution = () => {
+        setIsLoading(true)
+        setIsRecoveringSession(false)
+        logAuthDebug('onAuthStateChange:start', {
+          eventSession: Boolean(session),
+          userId: session?.user?.id ?? null,
+        })
+
+        void resolveSessionUser(session)
+          .catch((err) => {
+            console.error('Error loading auth state change:', err)
+          })
+          .finally(() => {
+            if (isMounted) {
+              setIsLoading(false)
+              logAuthDebug('onAuthStateChange:complete', {
+                durationMs: Math.round((typeof performance !== 'undefined' ? performance.now() : Date.now()) - authEventStartedAt),
+              })
+            }
+          })
+      }
+
+      if (typeof window !== 'undefined') {
+        authStateChangeTaskRef.current = window.setTimeout(() => {
+          authStateChangeTaskRef.current = null
+          scheduleAuthStateResolution()
+        }, 0)
+        return
+      }
+
+      queueMicrotask(scheduleAuthStateResolution)
     })
 
-    return () => subscription.unsubscribe()
+    return () => {
+      isMounted = false
+      if (authStateChangeTaskRef.current !== null && typeof window !== 'undefined') {
+        window.clearTimeout(authStateChangeTaskRef.current)
+      }
+      subscription.unsubscribe()
+    }
   }, [])
 
   const login = async (email: string, password: string): Promise<{ success: boolean; role?: UserRole; error?: string }> => {
@@ -289,7 +489,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ currentUser, isLoading, session, authError, login, logout, signup, updateProfile }}>
+    <AuthContext.Provider value={{ currentUser, isLoading, isRecoveringSession, session, authError, login, logout, signup, updateProfile }}>
       {children}
     </AuthContext.Provider>
   )

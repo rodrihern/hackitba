@@ -18,7 +18,7 @@ const navItems = [
 ]
 
 export default function UserLayout({ children }: { children: React.ReactNode }) {
-  const { currentUser, isLoading, session, authError, logout } = useAuth()
+  const { currentUser, isLoading, isRecoveringSession, session, authError, logout } = useAuth()
   const pathname = usePathname()
 
   const handleLogout = async () => {
@@ -32,14 +32,36 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
       if (window.location.pathname !== '/') {
         window.location.replace('/')
       }
-    }
-  }, [session, isLoading])
 
-  if (isLoading || (session && (!currentUser || currentUser.role !== 'user'))) {
-    if (!isLoading && authError) {
-      return <AuthRecoveryScreen message={authError} onReset={() => logout('/login')} />
+      return
     }
 
+    if (currentUser?.role === 'brand' && window.location.pathname !== '/brand/dashboard') {
+      window.location.replace('/brand/dashboard')
+    }
+  }, [session, currentUser, isLoading])
+
+  if (isLoading || isRecoveringSession) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
+  }
+
+  if (session && !currentUser) {
+    return (
+      <AuthRecoveryScreen
+        message={
+          authError ||
+          'La sesión existe, pero no se pudo cargar tu perfil de aplicación. Probablemente haya un problema de RLS, migraciones o configuración de Supabase.'
+        }
+        onReset={() => logout('/login')}
+      />
+    )
+  }
+
+  if (session && currentUser?.role !== 'user') {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
