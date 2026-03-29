@@ -160,6 +160,181 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Pricing */}
+      <section className="bg-gray-50 py-20 px-8">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl font-bold text-gray-900 mb-4">Planes para empresas</h2>
+            <p className="text-xl text-gray-500 max-w-2xl mx-auto mb-8">
+              Elegí el plan ideal para lanzar challenges y ofrecer canjes a creadores cada mes.
+            </p>
+            <div className="bg-white border border-gray-200 rounded-xl p-4 inline-block">
+              <p className="text-sm text-gray-600">
+                ✓ Todos los planes permiten conectar marcas con creadores, lanzar campañas y medir participación.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-end">
+            {/* Starter Plan */}
+            <div className="bg-white rounded-2xl p-8 shadow-sm hover:shadow-md transition-shadow border border-gray-100 flex flex-col h-full">
+              <div className="mb-6">
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">Starter</h3>
+                <div className="flex items-baseline gap-2 mb-2">
+                  <span className="text-4xl font-extrabold text-gray-900">$49</span>
+                  <span className="text-gray-500">/mes</span>
+                </div>
+                <p className="text-sm text-gray-500">Ideal para comenzar</p>
+              </div>
+
+              <div className="space-y-4 mb-8 flex-1">
+                <div className="flex items-center gap-3">
+                  <svg className="w-5 h-5 text-indigo-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                  <span className="text-gray-700">1 challenge por mes</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <svg className="w-5 h-5 text-indigo-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                  <span className="text-gray-700">2 canjes por mes</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <svg className="w-5 h-5 text-indigo-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                  <span className="text-gray-700">Acceso a leaderboards</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <svg className="w-5 h-5 text-indigo-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                  <span className="text-gray-700">Búsqueda de creadores</span>
+                </div>
+              </div>
+
+              <Link
+                href="/signup?plan=starter"
+                onClick={() => sessionStorage.setItem('signup_role', 'brand')}
+                className="w-full bg-gray-100 text-gray-900 font-semibold py-3 px-4 rounded-xl hover:bg-gray-200 transition-colors text-center"
+              >
+                Elegir starter
+              </Link>
+            </div>
+
+            {/* Growth Plan (Destacado) */}
+            <div className="bg-white rounded-2xl p-8 shadow-md hover:shadow-lg transition-shadow border-2 border-indigo-600 flex flex-col h-full md:scale-105 md:origin-center relative">
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2">
+                <span className="bg-indigo-600 text-white text-xs font-bold px-4 py-1 rounded-full">MÁS POPULAR</span>
+              </div>
+
+              <div className="mb-6 pt-4">
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">Growth</h3>
+                <div className="flex items-baseline gap-2 mb-2">
+                  <span className="text-4xl font-extrabold text-indigo-600">$149</span>
+                  <span className="text-gray-500">/mes</span>
+                </div>
+                <p className="text-sm text-gray-500">La opción más recomendada</p>
+              </div>
+
+              <div className="space-y-4 mb-8 flex-1">
+                <div className="flex items-center gap-3">
+                  <svg className="w-5 h-5 text-indigo-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                  <span className="text-gray-700">3 challenges por mes</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <svg className="w-5 h-5 text-indigo-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                  <span className="text-gray-700">10 canjes por mes</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <svg className="w-5 h-5 text-indigo-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                  <span className="text-gray-700">Acceso a leaderboards</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <svg className="w-5 h-5 text-indigo-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                  <span className="text-gray-700">Búsqueda de creadores</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <svg className="w-5 h-5 text-indigo-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                  <span className="text-gray-700">Analytics y reportes</span>
+                </div>
+              </div>
+
+              <Link
+                href="/signup?plan=growth"
+                onClick={() => sessionStorage.setItem('signup_role', 'brand')}
+                className="w-full bg-indigo-600 text-white font-semibold py-3 px-4 rounded-xl hover:bg-indigo-700 transition-colors text-center"
+              >
+                Elegir Growth
+              </Link>
+            </div>
+
+            {/* Scale Plan */}
+            <div className="bg-white rounded-2xl p-8 shadow-sm hover:shadow-md transition-shadow border border-gray-100 flex flex-col h-full">
+              <div className="mb-6">
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">Scale</h3>
+                <div className="flex items-baseline gap-2 mb-2">
+                  <span className="text-4xl font-extrabold text-gray-900">$499</span>
+                  <span className="text-gray-500">/mes</span>
+                </div>
+                <p className="text-sm text-gray-500">Para grandes volúmenes</p>
+              </div>
+
+              <div className="space-y-4 mb-8 flex-1">
+                <div className="flex items-center gap-3">
+                  <svg className="w-5 h-5 text-indigo-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                  <span className="text-gray-700">8 challenges por mes</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <svg className="w-5 h-5 text-indigo-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                  <span className="text-gray-700">30 canjes por mes</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <svg className="w-5 h-5 text-indigo-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                  <span className="text-gray-700">Acceso a leaderboards</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <svg className="w-5 h-5 text-indigo-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                  <span className="text-gray-700">Búsqueda de creadores</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <svg className="w-5 h-5 text-indigo-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                  <span className="text-gray-700">Analytics avanzados y API</span>
+                </div>
+              </div>
+
+              <a
+                href="mailto:sales@collabspace.ar"
+                className="w-full border-2 border-indigo-600 text-indigo-600 font-semibold py-3 px-4 rounded-xl hover:bg-indigo-50 transition-colors text-center"
+              >
+                Elegir scale
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* CTA */}
       <section className="bg-indigo-600 py-16 px-8 text-center">
         <h2 className="text-3xl font-bold text-white mb-4">¿Listo para empezar?</h2>
