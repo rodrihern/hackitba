@@ -180,7 +180,7 @@ export async function createCampaign(input: CreateCampaignInput): Promise<string
       throw new Error('Challenge was created without an id')
     }
 
-    if (input.challenge.isMultiDay && input.challenge.days.length > 0) {
+    if (input.challenge.days.length > 0) {
       const { error: daysError } = await withTimeout(
         supabase.from('challenge_days').insert(
           input.challenge.days.map((day, i) => ({

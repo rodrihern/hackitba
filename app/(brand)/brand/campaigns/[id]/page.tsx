@@ -107,8 +107,14 @@ export default function CampaignDetailPage() {
   }
 
   const updateScore = async (submissionId: string, score: number) => {
-    await updateChallengeSubmissionScore(submissionId, score)
-    setScores(prev => ({ ...prev, [submissionId]: score }))
+    setStatusError('')
+
+    try {
+      await updateChallengeSubmissionScore(submissionId, score)
+      setScores(prev => ({ ...prev, [submissionId]: score }))
+    } catch (err) {
+      setStatusError(err instanceof Error ? err.message : 'No se pudo actualizar el puntaje')
+    }
   }
 
   if (isLoading) {

@@ -97,6 +97,7 @@ export interface Challenge {
   maxWinners: number
   deadline?: string
   days: ChallengeDay[]
+  submissions?: ChallengeSubmission[]
 }
 
 export interface ChallengeDay {
@@ -126,8 +127,9 @@ export interface ChallengeSubmission {
   dayId: string
   userId: string
   userProfile: UserProfile
-  submissionUrl: string
-  submissionText: string
+  submissionUrl?: string
+  submissionText?: string
+  videoUrl?: string
   score?: number
   createdAt: string
 }

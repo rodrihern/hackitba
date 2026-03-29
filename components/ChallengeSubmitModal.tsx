@@ -53,6 +53,11 @@ export default function ChallengeSubmitModal({
       return
     }
 
+    if (!challengeId || !dayId) {
+      setError('Este reto no tiene una tarea configurada todavía. Pedile a la marca que revise la configuración del reto.')
+      return
+    }
+
     if (!hasContent) {
       setError('Agregá al menos un link, texto o video para tu entrega.')
       return
