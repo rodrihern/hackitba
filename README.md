@@ -1,37 +1,73 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# HackitBA / CollabSpace
 
-## Getting Started
+Plataforma de colaboraciones entre marcas y creadores construida con Next.js y Supabase. El proyecto tiene dos experiencias principales: una para creadores que exploran campañas, aplican a canjes y participan en retos; y otra para marcas que crean campañas, revisan postulaciones y administran recompensas.
 
-First, run the development server:
+Deploy activo: https://hackitba-collabspace.vercel.app/
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## Qué incluye
+
+- Landing pública con acceso a registro e inicio de sesión.
+- Autenticación con Supabase para usuarios tipo `user` y `brand`.
+- Bootstrap automático de perfiles a partir de `auth.users`.
+- Dashboard de creador con campañas activas, progreso por nivel y postulaciones.
+- Dashboard de marca con métricas, campañas recientes y accesos rápidos.
+- Creación de campañas de tipo `exchange` y `challenge`.
+- Formularios dinámicos para aplicaciones a canjes.
+- Marketplace de creadores, tienda de recompensas, perfil, puntos y notificaciones.
+- Esquema y migraciones de Supabase versionadas dentro del repo.
+
+## Stack
+
+- Next.js 16
+- React 19
+- Tailwind CSS 4
+- Supabase Auth + Postgres
+- TypeScript
+
+## Estructura principal
+
+```text
+app/                  Rutas App Router para landing, auth, user y brand
+components/           Componentes UI reutilizables
+lib/                  Contexto auth, cliente Supabase, mappers y servicios
+supabase/migrations/  Migraciones SQL del proyecto
+docs/schema.md        Referencia del esquema actual
+PRD.md                Documento funcional del producto
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Requisitos
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- Node.js 20+ recomendado
+- npm
+- Un proyecto de Supabase con Auth y base de datos PostgreSQL
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
-## Learn More
+## Flujos implementados
 
-To learn more about Next.js, take a look at the following resources:
+### Creadores
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- Registro e inicio de sesión
+- Home con campañas activas
+- Exploración de campañas y detalle por campaña
+- Aplicación a canjes
+- Perfil, puntos, tienda y notificaciones
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Marcas
 
-## Deploy on Vercel
+- Registro e inicio de sesión
+- Dashboard con métricas
+- Creación de campañas de canje y reto
+- Vista y gestión de campañas
+- Marketplace de creadores
+- Gestión de recompensas y seguimiento de aplicaciones
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Notas operativas
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-# hackitba
+- Si existe una sesión válida pero la app no puede reconstruir el perfil, revisá que el frontend apunte al proyecto correcto de Supabase y que la migración `202611010001_auth_profile_bootstrap.sql` esté aplicada.
+- El esquema de referencia está documentado en `docs/schema.md`.
+
+## Deploy
+
+La aplicación está desplegada en Vercel en:
+
+https://hackitba-collabspace.vercel.app/
