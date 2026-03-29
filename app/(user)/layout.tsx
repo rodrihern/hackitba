@@ -18,7 +18,7 @@ const navItems = [
 ]
 
 export default function UserLayout({ children }: { children: React.ReactNode }) {
-  const { currentUser, isLoading, session, authError, logout } = useAuth()
+  const { currentUser, isLoading, isRecoveringSession, session, authError, logout } = useAuth()
   const pathname = usePathname()
 
   const handleLogout = async () => {
@@ -41,7 +41,7 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
     }
   }, [session, currentUser, isLoading])
 
-  if (isLoading) {
+  if (isLoading || isRecoveringSession) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />

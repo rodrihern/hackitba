@@ -15,7 +15,7 @@ const navItems = [
 ]
 
 export default function BrandLayout({ children }: { children: React.ReactNode }) {
-  const { currentUser, isLoading, session, authError, logout } = useAuth()
+  const { currentUser, isLoading, isRecoveringSession, session, authError, logout } = useAuth()
   const pathname = usePathname()
   const [failedLogoSrc, setFailedLogoSrc] = useState<string | null>(null)
 
@@ -41,7 +41,7 @@ export default function BrandLayout({ children }: { children: React.ReactNode })
 
   const rawLogo = (currentUser?.profile as BrandProfile | undefined)?.logo?.trim() ?? ''
 
-  if (isLoading) {
+  if (isLoading || isRecoveringSession) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />

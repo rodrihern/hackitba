@@ -29,6 +29,7 @@ interface SignupData {
 interface AuthContextType {
   currentUser: AuthUser | null
   isLoading: boolean
+  isRecoveringSession: boolean
   session: Session | null
   authError: string | null
   login: (email: string, password: string) => Promise<{ success: boolean; role?: UserRole; error?: string }>
@@ -39,6 +40,7 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null)
 const INITIAL_SESSION_TIMEOUT_MS = 12000
+const INITIAL_SESSION_RETRY_TIMEOUT_MS = 8000
 const PROFILE_RESOLUTION_TIMEOUT_MS = 15000
 const AUTH_DEBUG_PREFIX = '[auth]'
 
@@ -73,6 +75,10 @@ async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: s
   } finally {
     if (timeoutId) clearTimeout(timeoutId)
   }
+}
+
+async function wait(ms: number) {
+  await new Promise((resolve) => setTimeout(resolve, ms))
 }
 
 function clearClientAuthArtifacts() {
@@ -110,8 +116,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null)
   const [session, setSession] = useState<Session | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [isRecoveringSession, setIsRecoveringSession] = useState(false)
   const [authError, setAuthError] = useState<string | null>(null)
   const authRequestIdRef = useRef(0)
+  const authStateChangeTaskRef = useRef<number | null>(null)
 
   const resolveSessionUser = async (activeSession: Session | null) => {
     const requestId = ++authRequestIdRef.current
@@ -127,6 +135,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!activeSession?.user) {
       setCurrentUser(null)
       setAuthError(null)
+      setIsRecoveringSession(false)
       logAuthDebug('resolveSessionUser:no-session', { requestId })
       return
     }
@@ -191,6 +200,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setAuthError(
           'Hay una sesión válida en Supabase, pero no existe un perfil usable en la base. Revisá que Vercel apunte al proyecto correcto y que la migración supabase/migrations/202611010001_auth_profile_bootstrap.sql esté aplicada.'
         )
+        setIsRecoveringSession(false)
         logAuthDebug('resolveSessionUser:missing-profile', {
           requestId,
           durationMs: Math.round((typeof performance !== 'undefined' ? performance.now() : Date.now()) - resolutionStartedAt),
@@ -200,6 +210,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       setCurrentUser(userData)
       setAuthError(null)
+      setIsRecoveringSession(false)
       logAuthDebug('resolveSessionUser:success', {
         requestId,
         durationMs: Math.round((typeof performance !== 'undefined' ? performance.now() : Date.now()) - resolutionStartedAt),
@@ -212,6 +223,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       setCurrentUser(null)
       setAuthError(err instanceof Error ? err.message : 'No se pudo cargar la sesión actual')
+      setIsRecoveringSession(false)
       logAuthDebug('resolveSessionUser:error', {
         requestId,
         durationMs: Math.round((typeof performance !== 'undefined' ? performance.now() : Date.now()) - resolutionStartedAt),
@@ -225,11 +237,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const sessionBootstrapStartedAt = typeof performance !== 'undefined' ? performance.now() : Date.now()
     logAuthDebug('bootstrap:start')
 
-    withTimeout(
-      getAuthSession(),
-      INITIAL_SESSION_TIMEOUT_MS,
-      'Supabase tardó demasiado en restaurar la sesión. Intentá recargar o volver a iniciar sesión.'
-    )
+    const loadInitialSession = async () => {
+      try {
+        return await withTimeout(
+          getAuthSession(),
+          INITIAL_SESSION_TIMEOUT_MS,
+          'Supabase tardó demasiado en restaurar la sesión. Intentá recargar o volver a iniciar sesión.'
+        )
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'No se pudo restaurar la sesión'
+        const isTimeout = message.toLowerCase().includes('tardó demasiado')
+
+        if (!isTimeout) {
+          throw err
+        }
+
+        setIsRecoveringSession(true)
+        logAuthDebug('bootstrap:getSession:retrying', {
+          firstAttemptDurationMs: Math.round((typeof performance !== 'undefined' ? performance.now() : Date.now()) - sessionBootstrapStartedAt),
+        })
+
+        await wait(250)
+
+        return withTimeout(
+          getAuthSession(),
+          INITIAL_SESSION_RETRY_TIMEOUT_MS,
+          'Supabase no logró restaurar la sesión después de reintentar. Intentá recargar o volver a iniciar sesión.'
+        )
+      }
+    }
+
+    loadInitialSession()
       .then(async ({ data: { session } }) => {
         if (!isMounted) return
         logAuthDebug('bootstrap:getSession:success', {
@@ -244,6 +282,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.error('Error loading auth session:', err)
         setCurrentUser(null)
         setSession(null)
+        setIsRecoveringSession(false)
         setAuthError(err instanceof Error ? err.message : 'No se pudo restaurar la sesión')
         logAuthDebug('bootstrap:getSession:error', {
           durationMs: Math.round((typeof performance !== 'undefined' ? performance.now() : Date.now()) - sessionBootstrapStartedAt),
@@ -259,32 +298,57 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       })
 
-    const { data: { subscription } } = onAuthStateChanged(async (_event, session) => {
+    const { data: { subscription } } = onAuthStateChanged((_event, session) => {
       if (!isMounted) return
 
-      setIsLoading(true)
+      if (authStateChangeTaskRef.current !== null && typeof window !== 'undefined') {
+        window.clearTimeout(authStateChangeTaskRef.current)
+      }
+
       const authEventStartedAt = typeof performance !== 'undefined' ? performance.now() : Date.now()
-      logAuthDebug('onAuthStateChange:start', {
+      logAuthDebug('onAuthStateChange:queued', {
         eventSession: Boolean(session),
         userId: session?.user?.id ?? null,
       })
 
-      try {
-        await resolveSessionUser(session)
-      } catch (err) {
-        console.error('Error loading auth state change:', err)
-      } finally {
-        if (isMounted) {
-          setIsLoading(false)
-          logAuthDebug('onAuthStateChange:complete', {
-            durationMs: Math.round((typeof performance !== 'undefined' ? performance.now() : Date.now()) - authEventStartedAt),
+      const scheduleAuthStateResolution = () => {
+        setIsLoading(true)
+        setIsRecoveringSession(false)
+        logAuthDebug('onAuthStateChange:start', {
+          eventSession: Boolean(session),
+          userId: session?.user?.id ?? null,
+        })
+
+        void resolveSessionUser(session)
+          .catch((err) => {
+            console.error('Error loading auth state change:', err)
           })
-        }
+          .finally(() => {
+            if (isMounted) {
+              setIsLoading(false)
+              logAuthDebug('onAuthStateChange:complete', {
+                durationMs: Math.round((typeof performance !== 'undefined' ? performance.now() : Date.now()) - authEventStartedAt),
+              })
+            }
+          })
       }
+
+      if (typeof window !== 'undefined') {
+        authStateChangeTaskRef.current = window.setTimeout(() => {
+          authStateChangeTaskRef.current = null
+          scheduleAuthStateResolution()
+        }, 0)
+        return
+      }
+
+      queueMicrotask(scheduleAuthStateResolution)
     })
 
     return () => {
       isMounted = false
+      if (authStateChangeTaskRef.current !== null && typeof window !== 'undefined') {
+        window.clearTimeout(authStateChangeTaskRef.current)
+      }
       subscription.unsubscribe()
     }
   }, [])
@@ -425,7 +489,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ currentUser, isLoading, session, authError, login, logout, signup, updateProfile }}>
+    <AuthContext.Provider value={{ currentUser, isLoading, isRecoveringSession, session, authError, login, logout, signup, updateProfile }}>
       {children}
     </AuthContext.Provider>
   )
