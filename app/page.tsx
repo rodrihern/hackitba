@@ -28,14 +28,14 @@ export default function Home() {
   }
 
   if (session && !currentUser) {
-    if (authError) {
-      return <AuthRecoveryScreen message={authError} onReset={() => logout('/login')} />
-    }
-
     return (
-      <div className="min-h-screen flex items-center justify-center bg-white">
-        <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
-      </div>
+      <AuthRecoveryScreen
+        message={
+          authError ||
+          'La sesión existe, pero no se pudo reconstruir el perfil de la app. Revisá migraciones, policies y que el frontend apunte al proyecto correcto de Supabase.'
+        }
+        onReset={() => logout('/login')}
+      />
     )
   }
 
